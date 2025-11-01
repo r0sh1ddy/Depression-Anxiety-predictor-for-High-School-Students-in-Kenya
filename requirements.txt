@@ -4,3 +4,7 @@ scikit-learn
 numpy
 shap
 matplotlib
+lightgbm
+xgboost
+joblib
+plotly
