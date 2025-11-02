@@ -1,23 +1,17 @@
-# Mental Health Screening App - Kenya
+# Mental Health Screening - Kenya
 # AdolescentMind: Predicting Anxiety and Depression in Adolescents
-
 ## Project Overview
 This project develops an **AI-powered screening tool** to predict depression (PHQ-8) and anxiety (GAD-7) symptoms among adolescents in Kenya.  
 Using machine learning trained on local survey data, it powers an **interactive web app** that provides early mental health risk assessments aligned with Kenya’s *Mental Health (Amendment) Act, 2022*.
-
 >  **Disclaimer:** This tool is for **screening**, not diagnosis.  
 > For professional help, consult a qualified healthcare provider.
-
 ## Business Understanding
 Mental health challenges among adolescents are rising. The **WHO (2023)** reports that 1 in 7 teenagers (ages 10–19) experience a mental health disorder.  
 This project aims to create a **data-driven early detection system** using responses from the PHQ-9 and GAD-7 questionnaires plus demographic information to identify students at risk of depression or anxiety.
-
 **Objectives:**
 - Build models that classify risk levels for depression and anxiety.  
 - Improve early screening access in schools through an interpretable AI app.  
 - Support national mental health policies focused on prevention and education.
-
-
 ## Methodology
 1. **Data Preparation:** Cleaned, encoded, and scaled demographic and screening data.  
 2. **EDA:** Used `seaborn` and `matplotlib` to visualize distributions, correlations, and outliers.  
@@ -25,19 +19,13 @@ This project aims to create a **data-driven early detection system** using respo
 4. **Evaluation:** Measured performance using accuracy, recall, precision, and F1-score.  
 5. **Interpretability:** Applied **SHAP** to identify key influencing features.  
 6. **Deployment:** Integrated models into an interactive **Streamlit** application.
-
-
 ## Key Insights
 - **Best Model:** LightGBM (strongest recall and interpretability).  
 - **Top Predictors:** PHQ-9 and GAD-7 responses, academic self-perception, and gender.  
 - **Insight:** Emotional and academic self-view indicators strongly influence risk classification.  
 - **Recommendation:** Deploy this model as an early alert system in Kenyan schools.
-
-
-
 ## Important Visuals
 Below are key visuals that summarize model performance, feature importance, and mental health trends in the dataset:
-
 | Visualization | Description |
 |---------------|-------------|
 | ![Average Test Accuracy](Image/Average_Test_Accuracy.png) | Comparison of model test accuracies |
@@ -58,17 +46,13 @@ Below are key visuals that summarize model performance, feature importance, and 
 | ![RandomForest Is Depressed SHAP](Image/RandomForest_Is_Depressed_SHAP.png) | Random Forest SHAP values (Depression model) |
 | ![XGBoost Has Anxiety SHAP](Image/XGBoost_Has_anxiety_SHAP.png) | XGBoost SHAP summary for anxiety |
 | ![XGBoost Is Depressed SHAP](Image/XGBoost_Is_Depressed_SHAP.png) | XGBoost SHAP summary for depression |
-
-
 # How to Run
 ## Notebook
 ### Clone repository
 git clone https://github.com/yourusername/AdolescentMind.git
 cd AdolescentMind
-
 ### Install dependencies
 pip install -r requirements.txt
-
 ### Launch analysis notebook
 jupyter notebook index.ipynb
 
