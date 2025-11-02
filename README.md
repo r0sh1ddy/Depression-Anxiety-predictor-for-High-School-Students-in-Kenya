@@ -1,7 +1,7 @@
 # Mental Health Screening - Kenya
 # AdolescentMind: Predicting Anxiety and Depression in Adolescents
 ## Project Overview
-This project develops an **AI-powered screening tool** to predict depression (PHQ-8) and anxiety (GAD-7) symptoms among adolescents in Kenya.  
+This project develops an **Machine Learning Model** to predict depression (PHQ-8) and anxiety (GAD-7) symptoms among adolescents in Kenya.  
 Using machine learning trained on local survey data, it powers an **interactive web app** that provides early mental health risk assessments aligned with Kenya’s *Mental Health (Amendment) Act, 2022*.
 >  **Disclaimer:** This tool is for **screening**, not diagnosis.  
 > For professional help, consult a qualified healthcare provider.
@@ -10,15 +10,15 @@ Mental health challenges among adolescents are rising. The **WHO (2023)** report
 This project aims to create a **data-driven early detection system** using responses from the PHQ-9 and GAD-7 questionnaires plus demographic information to identify students at risk of depression or anxiety.
 **Objectives:**
 - Build models that classify risk levels for depression and anxiety.  
-- Improve early screening access in schools through an interpretable AI app.  
+- Improve early screening access in schools through an interpretable  app.  
 - Support national mental health policies focused on prevention and education.
 ## Methodology
 1. **Data Preparation:** Cleaned, encoded, and scaled demographic and screening data.  
 2. **EDA:** Used `seaborn` and `matplotlib` to visualize distributions, correlations, and outliers.  
 3. **Modeling:** Trained Logistic Regression, Random Forest, XGBoost, and LightGBM models.  
-4. **Evaluation:** Measured performance using accuracy, recall, precision, and F1-score.  
+4. **Evaluation:** Measured performance using accuracy, recall, precision, and F1-score(Recal and Accuracy being the main metrics).  
 5. **Interpretability:** Applied **SHAP** to identify key influencing features.  
-6. **Deployment:** Integrated models into an interactive **Streamlit** application.
+6. **Deployment:** Integrated all our models into an interactive **Streamlit** application where the model with the best recall for each target is chosen in real-time to do a prediction.
 ## Key Insights
 - **Best Model:** LightGBM (strongest recall and interpretability).  
 - **Top Predictors:** PHQ-9 and GAD-7 responses, academic self-perception, and gender.  
@@ -47,7 +47,7 @@ Below are key visuals that summarize model performance, feature importance, and 
 # How to Run
 ## Notebook
 ### Clone repository
-git clone https://github.com/yourusername/AdolescentMind.git
+git clone git@github.com:r0sh1ddy/Depression-Anxiety-predictor-for-High-School-Students-in-Kenya.git
 cd AdolescentMind
 ### Install dependencies
 pip install -r requirements.txt
