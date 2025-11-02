@@ -4,7 +4,7 @@ Mental Health Screening App - Kenya
 
 ## Overview
 
-This is an **interactive AI-powered screening tool** for assessing depression (PHQ-8) and anxiety (GAD-7) symptoms among high school students in Kenya. The application uses machine learning models trained on real data to provide personalized mental health assessments.
+This is an **Interactive ensemble tool** for assessing depression (PHQ-8) and anxiety (GAD-7) symptoms among high school students in Kenya. The application uses machine learning models trained on real data to provide personalized mental health assessments.
 
 > **IMPORTANT:** This is a **screening tool**, NOT a diagnostic instrument. If you are concerned about your mental health, please contact a qualified healthcare professional.
 
