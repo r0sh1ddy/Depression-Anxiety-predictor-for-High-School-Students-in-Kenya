@@ -28,7 +28,6 @@ This project aims to create a **data-driven early detection system** using respo
 Below are key visuals that summarize model performance, feature importance, and mental health trends in the dataset:
 | Visualization | Description |
 |---------------|-------------|
-| ![Confusion Matrix](Image/Confusion_Matrix.png) | LightGBM confusion matrix on test data |
 | ![GAD Items](Image/GAD_Items.png) | Distribution of GAD-7 questionnaire responses |
 | ![LightGBM Has Anxiety SHAP](Image/LightGBM_Has_anxiety_SHAP.png) | SHAP interpretation for LightGBM anxiety model |
 | ![LightGBM Is Depressed SHAP](Image/LightGBM_Is_Depressed_SHAP.png) | SHAP interpretation for LightGBM depression model |
