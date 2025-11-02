@@ -28,13 +28,27 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        color: white;
+    .score-card {
+        padding: 2rem;
+        border-radius: 15px;
         text-align: center;
+        margin: 1rem 0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .score-number {
+        font-size: 4rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    .score-label {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    .contributing-factor {
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+        border-radius: 5px;
+        background: #f0f2f6;
     }
     .stButton>button {
         width: 100%;
@@ -54,7 +68,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Intelligent Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
 
 BASE = os.path.dirname(__file__)
 PIPELINE_FILE = os.path.join(BASE, "trained_pipelines.pkl")
@@ -72,78 +86,67 @@ if os.path.exists(METRICS_FILE):
 else:
     model_metrics = {}
 
-# Interactive Sidebar with Model Selection Option
-st.sidebar.title("⚙️ Settings & Info")
-
-# Model selection mode
-selection_mode = st.sidebar.radio(
-    "🤖 Model Selection Strategy:",
-    ["Auto-Select Best (Recommended)", "Manual Selection", "View All Models"],
-    help="Choose how models should be selected for predictions"
-)
-
-if selection_mode == "Manual Selection":
-    st.sidebar.markdown("### Choose Models")
-    manual_dep_model = st.sidebar.selectbox(
-        "Depression Model:",
-        list(pipelines.keys()) if pipelines else ["No models available"]
-    )
-    manual_anx_model = st.sidebar.selectbox(
-        "Anxiety Model:",
-        list(pipelines.keys()) if pipelines else ["No models available"]
+# Sidebar - Moved technical details here
+with st.sidebar:
+    st.title("⚙️ Settings")
+    
+    selection_mode = st.radio(
+        "🤖 Model Selection:",
+        ["Auto-Select Best", "Manual Selection", "View All Models"],
+        help="Choose how models should be selected for predictions"
     )
 
-st.sidebar.markdown("---")
-
-# Interactive model performance visualizations
-if model_metrics:
-    st.sidebar.markdown("### 📊 Model Performance")
-    
-    # Create interactive comparison chart
-    view_metric = st.sidebar.selectbox(
-        "View Metric:",
-        ["Recall", "Accuracy"],
-        help="Select which metric to visualize"
-    )
-    
-    metric_key = 'test_recall_per_target' if view_metric == "Recall" else 'test_accuracy_per_target'
-    
-    dep_scores = []
-    anx_scores = []
-    model_names = []
-    
-    for m, vals in model_metrics.items():
-        if metric_key in vals:
-            model_names.append(m)
-            dep_scores.append(vals[metric_key].get('Is_Depressed', 0) * 100)
-            anx_scores.append(vals[metric_key].get('Has_anxiety', 0) * 100)
-    
-    if model_names:
-        fig = go.Figure(data=[
-            go.Bar(name='Depression', x=model_names, y=dep_scores, marker_color='#1f77b4'),
-            go.Bar(name='Anxiety', x=model_names, y=anx_scores, marker_color='#ff7f0e')
-        ])
-        fig.update_layout(
-            barmode='group',
-            height=300,
-            title=f"Model {view_metric} Comparison (%)",
-            yaxis_title=f"{view_metric} (%)",
-            showlegend=True,
-            margin=dict(l=20, r=20, t=40, b=20)
+    if selection_mode == "Manual Selection":
+        st.markdown("### Choose Models")
+        manual_dep_model = st.selectbox(
+            "Depression Model:",
+            list(pipelines.keys()) if pipelines else ["No models available"]
         )
-        st.sidebar.plotly_chart(fig, use_container_width=True)
+        manual_anx_model = st.selectbox(
+            "Anxiety Model:",
+            list(pipelines.keys()) if pipelines else ["No models available"]
+        )
 
-st.sidebar.markdown("---")
-st.sidebar.info("💡 **Tip:** The tool automatically selects the best-performing model for each target based on recall scores.")
+    st.markdown("---")
+    
+    # Show technical details in expander
+    with st.expander("📊 Technical Details", expanded=False):
+        if model_metrics:
+            view_metric = st.selectbox(
+                "View Metric:",
+                ["Recall", "Accuracy"]
+            )
+            
+            metric_key = 'test_recall_per_target' if view_metric == "Recall" else 'test_accuracy_per_target'
+            
+            dep_scores = []
+            anx_scores = []
+            model_names = []
+            
+            for m, vals in model_metrics.items():
+                if metric_key in vals:
+                    model_names.append(m)
+                    dep_scores.append(vals[metric_key].get('Is_Depressed', 0) * 100)
+                    anx_scores.append(vals[metric_key].get('Has_anxiety', 0) * 100)
+            
+            if model_names:
+                fig = go.Figure(data=[
+                    go.Bar(name='Depression', x=model_names, y=dep_scores, marker_color='#1f77b4'),
+                    go.Bar(name='Anxiety', x=model_names, y=anx_scores, marker_color='#ff7f0e')
+                ])
+                fig.update_layout(
+                    barmode='group',
+                    height=300,
+                    title=f"Model {view_metric} (%)",
+                    yaxis_title=f"{view_metric} (%)",
+                    showlegend=True,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-# Main content - Interactive Form with Progress
+# Main content - Assessment Form
 st.markdown("## 📝 Complete the Assessment")
 
-# Progress tracking
-if 'current_step' not in st.session_state:
-    st.session_state.current_step = 1
-
-# Create tabs for different sections
 tab1, tab2, tab3 = st.tabs(["👤 Demographics", "🧠 Depression (PHQ-8)", "😰 Anxiety (GAD-7)"])
 
 with tab1:
@@ -209,11 +212,9 @@ with tab2:
                 )
         st.markdown("---")
     
-    # Show PHQ score
     phq_total = sum(phq.values())
     st.markdown(f"### Current PHQ-8 Score: **{phq_total}** / 24")
     
-    # Score interpretation with color coding
     if phq_total < 5:
         st.success("✅ Minimal depression symptoms")
     elif phq_total < 10:
@@ -256,11 +257,9 @@ with tab3:
                 )
         st.markdown("---")
     
-    # Show GAD score
     gad_total = sum(gad.values())
     st.markdown(f"### Current GAD-7 Score: **{gad_total}** / 21")
     
-    # Score interpretation with color coding
     if gad_total < 5:
         st.success("✅ Minimal anxiety symptoms")
     elif gad_total < 10:
@@ -270,14 +269,140 @@ with tab3:
     else:
         st.error("🚨 Severe anxiety symptoms")
 
-# Prominent submit button
+# Submit button
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     submitted = st.button("🔍 Analyze Mental Health Status", use_container_width=True)
 
+def get_severity_info(score, max_score, assessment_type):
+    """Get severity level, color, and recommendations"""
+    percentage = (score / max_score) * 100
+    
+    if assessment_type == 'depression':
+        if score < 5:
+            return {
+                'level': 'Minimal',
+                'color': '#28a745',
+                'description': 'Your symptoms are minimal and not significantly impacting daily life.',
+                'recommendations': [
+                    'Maintain healthy lifestyle habits',
+                    'Continue engaging in activities you enjoy',
+                    'Stay connected with friends and family',
+                    'Practice good sleep hygiene'
+                ]
+            }
+        elif score < 10:
+            return {
+                'level': 'Mild',
+                'color': '#ffc107',
+                'description': 'You are experiencing mild symptoms that may benefit from self-care strategies.',
+                'recommendations': [
+                    'Engage in regular physical exercise',
+                    'Practice relaxation techniques (meditation, deep breathing)',
+                    'Maintain a regular sleep schedule',
+                    'Talk to someone you trust about how you feel',
+                    'Consider speaking with a school counselor'
+                ]
+            }
+        elif score < 15:
+            return {
+                'level': 'Moderate',
+                'color': '#fd7e14',
+                'description': 'You are experiencing moderate symptoms. Professional support is recommended.',
+                'recommendations': [
+                    '🏥 Speak with a mental health professional or counselor',
+                    'Continue self-care practices',
+                    'Inform a trusted adult or family member',
+                    'Consider therapy or counseling services',
+                    'Avoid isolation - stay connected with others'
+                ]
+            }
+        elif score < 20:
+            return {
+                'level': 'Moderately Severe',
+                'color': '#dc3545',
+                'description': 'You are experiencing moderately severe symptoms. Professional help is strongly recommended.',
+                'recommendations': [
+                    '🏥 **Seek professional help immediately**',
+                    'Contact your school counselor or guidance office',
+                    'Inform your parents or guardian',
+                    'Professional therapy is recommended',
+                    'Do not face this alone - reach out for support'
+                ]
+            }
+        else:
+            return {
+                'level': 'Severe',
+                'color': '#bd2130',
+                'description': 'You are experiencing severe symptoms. Immediate professional intervention is needed.',
+                'recommendations': [
+                    '🚨 **Seek immediate professional help**',
+                    'Contact a mental health crisis line',
+                    'Visit a healthcare facility',
+                    'Inform your parents/guardians immediately',
+                    'Kenya Red Cross: 1199',
+                    'Befrienders Kenya: +254 722 178 177'
+                ]
+            }
+    else:  # anxiety
+        if score < 5:
+            return {
+                'level': 'Minimal',
+                'color': '#28a745',
+                'description': 'Your anxiety symptoms are minimal.',
+                'recommendations': [
+                    'Continue healthy stress management practices',
+                    'Maintain regular exercise routine',
+                    'Practice mindfulness or meditation',
+                    'Get adequate sleep'
+                ]
+            }
+        elif score < 10:
+            return {
+                'level': 'Mild',
+                'color': '#ffc107',
+                'description': 'You are experiencing mild anxiety that may respond to relaxation techniques.',
+                'recommendations': [
+                    'Practice deep breathing exercises',
+                    'Try progressive muscle relaxation',
+                    'Limit caffeine intake',
+                    'Maintain regular physical activity',
+                    'Talk to someone you trust'
+                ]
+            }
+        elif score < 15:
+            return {
+                'level': 'Moderate',
+                'color': '#fd7e14',
+                'description': 'You are experiencing moderate anxiety. Professional guidance is recommended.',
+                'recommendations': [
+                    '🏥 Consider speaking with a mental health professional',
+                    'Learn and practice anxiety management techniques',
+                    'Identify and address anxiety triggers',
+                    'Maintain a worry journal',
+                    'Join a support group if available'
+                ]
+            }
+        else:
+            return {
+                'level': 'Severe',
+                'color': '#dc3545',
+                'description': 'You are experiencing severe anxiety. Professional support is strongly recommended.',
+                'recommendations': [
+                    '🏥 **Seek professional help as soon as possible**',
+                    'Contact your school counselor immediately',
+                    'Inform your parents or guardian',
+                    'Professional therapy or treatment is needed',
+                    'Practice grounding techniques during anxiety episodes',
+                    'Kenya Red Cross: 1199'
+                ]
+            }
+    
+    return info
+
 if submitted:
-    with st.spinner("🤖 AI models are analyzing your responses..."):
+    with st.spinner("🤖 Analyzing your responses..."):
         input_data = {
             "Boarding_day": boarding_day,
             "School_type": school_type,
@@ -314,7 +439,7 @@ if submitted:
                     'anxiety_pred': None
                 }
 
-        # Model selection based on mode
+        # Model selection
         if selection_mode == "Manual Selection":
             best_dep_model = manual_dep_model
             best_anx_model = manual_anx_model
@@ -322,216 +447,284 @@ if submitted:
             best_anx_recall = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
         else:
             # Auto-select best models
-            best_dep_model = None
-            best_dep_recall = -1
+            best_dep_model = max(
+                model_metrics.items(),
+                key=lambda x: x[1].get('test_recall_per_target', {}).get('Is_Depressed', 0)
+            )[0] if model_metrics else None
             
-            for name, metrics in model_metrics.items():
-                if 'test_recall_per_target' in metrics:
-                    dep_recall = metrics['test_recall_per_target'].get('Is_Depressed', 0)
-                    if dep_recall > best_dep_recall:
-                        best_dep_recall = dep_recall
-                        best_dep_model = name
-
-            best_anx_model = None
-            best_anx_recall = -1
+            best_anx_model = max(
+                model_metrics.items(),
+                key=lambda x: x[1].get('test_recall_per_target', {}).get('Has_anxiety', 0)
+            )[0] if model_metrics else None
             
-            for name, metrics in model_metrics.items():
-                if 'test_recall_per_target' in metrics:
-                    anx_recall = metrics['test_recall_per_target'].get('Has_anxiety', 0)
-                    if anx_recall > best_anx_recall:
-                        best_anx_recall = anx_recall
-                        best_anx_model = name
+            best_dep_recall = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
+            best_anx_recall = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
 
         depression_prediction = all_predictions.get(best_dep_model, {}).get('depression_pred', 'N/A')
         anxiety_prediction = all_predictions.get(best_anx_model, {}).get('anxiety_pred', 'N/A')
 
+        # Get severity information
+        dep_info = get_severity_info(phq_total, 24, 'depression')
+        anx_info = get_severity_info(gad_total, 21, 'anxiety')
+
         # Results Display
         st.balloons()
         st.markdown("---")
-        st.markdown("## 🎯 Analysis Complete!")
-        
-        # Model info badges
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info(f"🧠 **Depression Model:** {best_dep_model} | Recall: {best_dep_recall:.1%}")
-        with col2:
-            st.info(f"😰 **Anxiety Model:** {best_anx_model} | Recall: {best_anx_recall:.1%}")
-        
+        st.markdown("## 🎯 Your Mental Health Assessment Results")
+        st.markdown("*Based on your responses, here's what we found:*")
         st.markdown("---")
-        
-        # Results in cards
+
+        # Main Results Cards
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("### 🧠 Depression Assessment")
+            st.markdown(f"""
+            <div class="score-card" style="background: linear-gradient(135deg, {dep_info['color']}15 0%, {dep_info['color']}30 100%); border-left: 5px solid {dep_info['color']}">
+                <h2 style="margin:0; color: {dep_info['color']}">🧠 Depression Assessment</h2>
+                <div class="score-number" style="color: {dep_info['color']}">{phq_total}<span style="font-size:2rem; color: #666">/24</span></div>
+                <div class="score-label" style="color: {dep_info['color']}">{dep_info['level']}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Map prediction to category name
-            dep_categories = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Moderately Severe', 4: 'Severe'}
-            dep_category = dep_categories.get(depression_prediction, str(depression_prediction))
+            st.markdown(f"**What this means:** {dep_info['description']}")
             
-            if depression_prediction in [0, 'none', 'None']:
-                st.success(f"### ✅ {dep_category}")
-                color = "green"
-            elif depression_prediction in [1, 'mild', 'Mild']:
-                st.info(f"### ℹ️ {dep_category}")
-                color = "blue"
-            elif depression_prediction in [2, 'moderate', 'Moderate']:
-                st.warning(f"### ⚠️ {dep_category}")
-                color = "orange"
-            else:
-                st.error(f"### 🚨 {dep_category}")
-                color = "red"
-            
-            dep_metrics = model_metrics.get(best_dep_model, {})
-            col_a, col_b = st.columns(2)
-            with col_a:
-                if 'test_recall_per_target' in dep_metrics:
-                    st.metric("Model Recall", f"{dep_metrics['test_recall_per_target'].get('Is_Depressed', 0):.1%}")
-            with col_b:
-                if 'test_accuracy_per_target' in dep_metrics:
-                    st.metric("Model Accuracy", f"{dep_metrics['test_accuracy_per_target'].get('Is_Depressed', 0):.1%}")
+            st.markdown("#### 💡 Recommended Actions:")
+            for rec in dep_info['recommendations']:
+                st.markdown(f"- {rec}")
         
         with col2:
-            st.markdown("### 😰 Anxiety Assessment")
+            st.markdown(f"""
+            <div class="score-card" style="background: linear-gradient(135deg, {anx_info['color']}15 0%, {anx_info['color']}30 100%); border-left: 5px solid {anx_info['color']}">
+                <h2 style="margin:0; color: {anx_info['color']}">😰 Anxiety Assessment</h2>
+                <div class="score-number" style="color: {anx_info['color']}">{gad_total}<span style="font-size:2rem; color: #666">/21</span></div>
+                <div class="score-label" style="color: {anx_info['color']}">{anx_info['level']}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Map prediction to category name
-            anx_categories = {0: 'Minimal', 1: 'Mild', 2: 'Moderate', 3: 'Severe'}
-            anx_category = anx_categories.get(anxiety_prediction, str(anxiety_prediction))
+            st.markdown(f"**What this means:** {anx_info['description']}")
             
-            if anxiety_prediction in [0, 'minimal', 'Minimal']:
-                st.success(f"### ✅ {anx_category}")
-            elif anxiety_prediction in [1, 'mild', 'Mild']:
-                st.info(f"### ℹ️ {anx_category}")
-            elif anxiety_prediction in [2, 'moderate', 'Moderate']:
-                st.warning(f"### ⚠️ {anx_category}")
-            else:
-                st.error(f"### 🚨 {anx_category}")
-            
-            anx_metrics = model_metrics.get(best_anx_model, {})
-            col_c, col_d = st.columns(2)
-            with col_c:
-                if 'test_recall_per_target' in anx_metrics:
-                    st.metric("Model Recall", f"{anx_metrics['test_recall_per_target'].get('Has_anxiety', 0):.1%}")
-            with col_d:
-                if 'test_accuracy_per_target' in anx_metrics:
-                    st.metric("Model Accuracy", f"{anx_metrics['test_accuracy_per_target'].get('Has_anxiety', 0):.1%}")
+            st.markdown("#### 💡 Recommended Actions:")
+            for rec in anx_info['recommendations']:
+                st.markdown(f"- {rec}")
 
-        # Interactive comparison if "View All Models" is selected
-        if selection_mode == "View All Models":
-            st.markdown("---")
-            st.markdown("### 📊 Detailed Model Comparison")
-            
-            comparison_data = []
-            for name in pipelines.keys():
-                metrics = model_metrics.get(name, {})
-                preds = all_predictions.get(name, {})
-                
-                comparison_data.append({
-                    "Model": name,
-                    "Depression": dep_categories.get(preds.get('depression_pred', 'N/A'), 'N/A'),
-                    "Dep Recall": f"{metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0):.1%}",
-                    "Dep Accuracy": f"{metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0):.1%}",
-                    "Anxiety": anx_categories.get(preds.get('anxiety_pred', 'N/A'), 'N/A'),
-                    "Anx Recall": f"{metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0):.1%}",
-                    "Anx Accuracy": f"{metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0):.1%}"
-                })
-            
-            st.dataframe(pd.DataFrame(comparison_data), use_container_width=True)
-
-        # SHAP explanations with interactive tabs
+        # SHAP Explanations - Fixed implementation
         st.markdown("---")
-        st.markdown("### 🔍 AI Decision Explanation (SHAP)")
-        st.markdown("*Understanding what influenced the predictions*")
+        st.markdown("### 🔍 Understanding Your Results")
+        st.markdown("*These charts show which factors had the most influence on your assessment:*")
         
-        tab1, tab2 = st.tabs([f"🧠 Depression ({best_dep_model})", f"😰 Anxiety ({best_anx_model})"])
+        tab1, tab2 = st.tabs(["🧠 Depression Factors", "😰 Anxiety Factors"])
         
         with tab1:
             try:
                 sel_pipe = pipelines[best_dep_model]
                 pre = sel_pipe.named_steps['preprocessor']
                 clf = sel_pipe.named_steps['clf']
+                
+                # Transform input
                 X_trans = pre.transform(user_df)
-                base = clf.estimators_[0]
                 
-                explainer = shap.Explainer(base)
-                shap_values = explainer(X_trans)
+                # Get feature names after transformation
+                try:
+                    feature_names = pre.get_feature_names_out()
+                except:
+                    feature_names = [f"Feature_{i}" for i in range(X_trans.shape[1])]
                 
+                # Get the depression estimator
+                if hasattr(clf, 'estimators_'):
+                    base_model = clf.estimators_[0]  # Depression is first target
+                else:
+                    base_model = clf
+                
+                # Create SHAP explainer
+                explainer = shap.TreeExplainer(base_model)
+                shap_values = explainer.shap_values(X_trans)
+                
+                # Handle multi-class output
+                if isinstance(shap_values, list):
+                    shap_values = shap_values[1]  # Use positive class
+                
+                # Create visualization
                 fig, ax = plt.subplots(figsize=(10, 6))
-                shap.plots.bar(shap_values, max_display=12, show=False)
-                plt.title(f"Top Features Influencing Depression Prediction", fontsize=14, pad=15)
+                shap.summary_plot(
+                    shap_values, 
+                    X_trans, 
+                    feature_names=feature_names,
+                    plot_type="bar",
+                    max_display=10,
+                    show=False
+                )
+                plt.title("Factors Contributing to Depression Assessment", fontsize=14, pad=15)
+                plt.tight_layout()
                 st.pyplot(fig)
-                plt.close(fig)
+                plt.close()
                 
-                st.info("📖 **How to read this:** Features at the top had the strongest influence on the prediction. Red bars push toward higher severity, blue bars toward lower severity.")
+                st.info("""
+                📖 **How to read this chart:** 
+                - Longer bars = stronger influence on your result
+                - These are the top factors that contributed to your depression assessment
+                - Factors can include your survey responses, demographics, and reported symptoms
+                """)
                 
             except Exception as e:
-                st.warning(f"SHAP explanation unavailable for this model: {e}")
+                st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
+                st.info("The AI model still made predictions, but we couldn't show the contributing factors.")
         
         with tab2:
             try:
                 sel_pipe = pipelines[best_anx_model]
                 pre = sel_pipe.named_steps['preprocessor']
                 clf = sel_pipe.named_steps['clf']
-                X_trans = pre.transform(user_df)
-                base = clf.estimators_[1]
                 
-                explainer = shap.Explainer(base)
-                shap_values = explainer(X_trans)
+                X_trans = pre.transform(user_df)
+                
+                try:
+                    feature_names = pre.get_feature_names_out()
+                except:
+                    feature_names = [f"Feature_{i}" for i in range(X_trans.shape[1])]
+                
+                # Get the anxiety estimator
+                if hasattr(clf, 'estimators_'):
+                    base_model = clf.estimators_[1]  # Anxiety is second target
+                else:
+                    base_model = clf
+                
+                explainer = shap.TreeExplainer(base_model)
+                shap_values = explainer.shap_values(X_trans)
+                
+                if isinstance(shap_values, list):
+                    shap_values = shap_values[1]
                 
                 fig, ax = plt.subplots(figsize=(10, 6))
-                shap.plots.bar(shap_values, max_display=12, show=False)
-                plt.title(f"Top Features Influencing Anxiety Prediction", fontsize=14, pad=15)
+                shap.summary_plot(
+                    shap_values, 
+                    X_trans, 
+                    feature_names=feature_names,
+                    plot_type="bar",
+                    max_display=10,
+                    show=False
+                )
+                plt.title("Factors Contributing to Anxiety Assessment", fontsize=14, pad=15)
+                plt.tight_layout()
                 st.pyplot(fig)
-                plt.close(fig)
+                plt.close()
                 
-                st.info("📖 **How to read this:** Features at the top had the strongest influence on the prediction. Red bars push toward higher severity, blue bars toward lower severity.")
+                st.info("""
+                📖 **How to read this chart:** 
+                - Longer bars = stronger influence on your result
+                - These are the top factors that contributed to your anxiety assessment
+                - Factors can include your survey responses, demographics, and reported symptoms
+                """)
                 
             except Exception as e:
-                st.warning(f"SHAP explanation unavailable for this model: {e}")
+                st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
+                st.info("The AI model still made predictions, but we couldn't show the contributing factors.")
 
-        # Download results option
-        st.markdown("---")
-        st.markdown("### 💾 Save Your Results")
-        
-        results_summary = f"""
-        MENTAL HEALTH SCREENING RESULTS
-        Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
-        
-        DEPRESSION ASSESSMENT (PHQ-8)
-        Model Used: {best_dep_model}
-        Category: {dep_category}
-        PHQ-8 Score: {phq_total}/24
-        Model Recall: {best_dep_recall:.1%}
-        
-        ANXIETY ASSESSMENT (GAD-7)
-        Model Used: {best_anx_model}
-        Category: {anx_category}
-        GAD-7 Score: {gad_total}/21
-        Model Recall: {best_anx_recall:.1%}
-        
-        DISCLAIMER: This is a screening tool, not a diagnosis. Please consult a healthcare professional for proper evaluation.
-        """
-        
-        st.download_button(
-            label="📥 Download Results as Text File",
-            data=results_summary,
-            file_name=f"mental_health_screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
-            mime="text/plain"
-        )
+        # Technical details in expander
+        if selection_mode == "View All Models":
+            with st.expander("📊 View All Model Predictions", expanded=False):
+                dep_categories = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Moderately Severe', 4: 'Severe'}
+                anx_categories = {0: 'Minimal', 1: 'Mild', 2: 'Moderate', 3: 'Severe'}
+                
+                comparison_data = []
+                for name in pipelines.keys():
+                    metrics = model_metrics.get(name, {})
+                    preds = all_predictions.get(name, {})
+                    
+                    comparison_data.append({
+                        "Model": name,
+                        "Depression": dep_categories.get(preds.get('depression_pred', 'N/A'), 'N/A'),
+                        "Dep Recall": f"{metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0):.1%}",
+                        "Dep Accuracy": f"{metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0):.1%}",
+                        "Anxiety": anx_categories.get(preds.get('anxiety_pred', 'N/A'), 'N/A'),
+                        "Anx Recall": f"{metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0):.1%}",
+                        "Anx Accuracy": f"{metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0):.1%}"
+                    })
+                
+                st.dataframe(pd.DataFrame(comparison_data), use_container_width=True)
 
+        # Download results
         st.markdown("---")
-        st.error("""
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown("### 💾 Save Your Results")
+            st.markdown("Download a summary of your assessment to share with a healthcare provider.")
+        
+        with col2:
+            results_summary = f"""MENTAL HEALTH SCREENING RESULTS
+Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
+
+DEPRESSION ASSESSMENT (PHQ-8)
+Score: {phq_total}/24
+Severity: {dep_info['level']}
+Description: {dep_info['description']}
+
+Recommendations:
+{chr(10).join('- ' + rec for rec in dep_info['recommendations'])}
+
+ANXIETY ASSESSMENT (GAD-7)
+Score: {gad_total}/21
+Severity: {anx_info['level']}
+Description: {anx_info['description']}
+
+Recommendations:
+{chr(10).join('- ' + rec for rec in anx_info['recommendations'])}
+
+TECHNICAL DETAILS
+Depression Model: {best_dep_model} (Recall: {best_dep_recall:.1%})
+Anxiety Model: {best_anx_model} (Recall: {best_anx_recall:.1%})
+
+IMPORTANT: This is a screening tool, not a diagnosis.
+Please consult a healthcare professional for proper evaluation.
+"""
+            
+            st.download_button(
+                label="📥 Download Report",
+                data=results_summary,
+                file_name=f"mental_health_screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+
+        # Crisis resources - Always visible for high scores
+        if phq_total >= 15 or gad_total >= 15:
+            st.markdown("---")
+            st.error("""
+            ### 🚨 IMMEDIATE SUPPORT NEEDED
+            
+            Your scores indicate significant symptoms. Please reach out for help immediately:
+            
+            **Crisis Resources in Kenya:**
+            - 🚑 **Kenya Red Cross:** 1199
+            - 📞 **Befrienders Kenya:** +254 722 178 177
+            - 🏥 **Your school counselor or guidance department**
+            - 👨‍👩‍👧 **A trusted adult, teacher, or family member**
+            
+            **You are not alone. Help is available and recovery is possible.**
+            """)
+
+        # Final disclaimer
+        st.markdown("---")
+        st.warning("""
         ### ⚠️ IMPORTANT DISCLAIMER
         
         This tool is for **screening and educational purposes only**. It is **NOT** a diagnostic instrument.
         
-        **If you are experiencing mental health concerns:**
-        - 🏥 Contact a qualified mental health professional or counselor
-        - 📞 Reach out to Kenya's mental health helpline
-        - 👨‍👩‍👧 Talk to a trusted adult, teacher, or family member
+        **The results:**
+        - Provide an indication of symptom severity
+        - Are based on standardized mental health screening questionnaires (PHQ-8 and GAD-7)
+        - Should be discussed with a qualified mental health professional
+        - Do not replace professional clinical assessment
         
-        **Crisis Resources:**
-        - Kenya Red Cross: 1199
-        - Befrienders Kenya: +254 722 178 177
+        **Next Steps:**
+        - 🏥 Share these results with a healthcare provider or counselor
+        - 📋 Use this as a starting point for a conversation about your mental health
+        - 🔄 Consider re-taking this assessment periodically to track changes
+        - 💬 Talk to someone you trust about how you're feeling
+        
+        **If you are experiencing a mental health crisis:**
+        - Kenya Red Cross: **1199**
+        - Befrienders Kenya: **+254 722 178 177**
         - Your school counselor or guidance department
+        - Go to the nearest hospital emergency department
         """)
