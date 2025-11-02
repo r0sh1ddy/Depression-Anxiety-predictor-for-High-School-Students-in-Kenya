@@ -28,7 +28,6 @@ This project aims to create a **data-driven early detection system** using respo
 Below are key visuals that summarize model performance, feature importance, and mental health trends in the dataset:
 | Visualization | Description |
 |---------------|-------------|
-| ![Average Test Accuracy](Image/Average_Test_Accuracy.png) | Comparison of model test accuracies |
 | ![Average Validation Accuracy](Image/Average_Validation_Accuracy.png) | Validation accuracy across models |
 | ![Confusion Matrix](Image/Confusion_Matrix.png) | LightGBM confusion matrix on test data |
 | ![GAD Items](Image/GAD_Items.png) | Distribution of GAD-7 questionnaire responses |
@@ -55,7 +54,6 @@ cd AdolescentMind
 pip install -r requirements.txt
 ### Launch analysis notebook
 jupyter notebook index.ipynb
-
 ## Mental Health Screening App
 # Run Streamlit app
 - bash
