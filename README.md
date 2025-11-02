@@ -37,7 +37,7 @@ Below are key visuals that summarize model performance, feature importance, and 
 | ![Overlap of High Depression and Anxiety](Image/Overlap_of_High_Depression_and_Anxiety.png) | Co-occurrence of depression and anxiety |
 | ![PHQ Items](Image/PHQ_Items.png) | Distribution of PHQ-9 questionnaire responses |
 | ![Preliminary Feature Importance 1](Image/Preliminary_Feature_Importance_1.png) | Initial model feature ranking (part 1) |
-| ![Preliminary Feature Importance 2](Image/Preliminary_Feature_Importance_2.png) | Initial model feature ranking (part 2) |
+| ![Preliminary Feature Importance 2](Image/Preliminary Feature Importance for Depression.png) | Initial model feature ranking (part 2) |
 | ![Prevalence of Depression and Anxiety](Image/Prevalence_of_Depression_and_Anxiety.png) | Overall prevalence of both disorders |
 | ![RandomForest Has Anxiety SHAP](Image/RandomForest_Has_anxiety_SHAP.png) | Random Forest SHAP values (Anxiety model) |
 | ![RandomForest Is Depressed SHAP](Image/RandomForest_Is_Depressed_SHAP.png) | Random Forest SHAP values (Depression model) |
