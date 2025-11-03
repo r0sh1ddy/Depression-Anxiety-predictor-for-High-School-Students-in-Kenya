@@ -70,7 +70,7 @@ st.markdown("""
 
 # Header with optional custom logo
 BASE = os.path.dirname(__file__)
-LOGO_PATH = os.path.join(BASE, "images", "logo.png")  # Place your logo here
+LOGO_PATH = os.path.join(BASE, "app_images", "icon.jpg")  # Place your logo here
 
 # Display logo if available
 if os.path.exists(LOGO_PATH):
@@ -78,7 +78,7 @@ if os.path.exists(LOGO_PATH):
     with col2:
         st.image(LOGO_PATH, use_container_width=True)
 else:
-    st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"> AdolecentMind Screening Tool</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="sub-header">Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
 
@@ -99,10 +99,10 @@ else:
 
 # Sidebar - Enhanced with best model display
 with st.sidebar:
-    st.title("⚙️ Settings")
+    st.title(" Settings")
     
     selection_mode = st.radio(
-        "🤖 Model Selection:",
+        " Model Selection:",
         ["Auto-Select Best", "Manual Selection", "View All Models"],
         help="Choose how models should be selected for predictions"
     )
@@ -122,7 +122,7 @@ with st.sidebar:
     
     # Show best models for each target
     if model_metrics:
-        st.markdown("### 🏆 Best Models by Recall")
+        st.markdown("### Best Models by Recall")
         
         # Find best depression model
         best_dep_recall = -1
@@ -191,7 +191,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Show technical details in expander
-    with st.expander("📊 All Models Comparison", expanded=False):
+    with st.expander(" All Models Comparison", expanded=False):
         if model_metrics:
             view_metric = st.selectbox(
                 "View Metric:",
@@ -227,10 +227,10 @@ with st.sidebar:
                 st.plotly_chart(fig, use_container_width=True)
     
     st.markdown("---")
-    st.info("💡 **Note:** Recall measures how well the model identifies people who need support.")
+    st.info(" **Note:** Recall measures how well the model identifies people who need support.")
 
 # Main content - Assessment Form
-st.markdown("## 📝 Complete the Assessment")
+st.markdown("## Complete the Assessment")
 
 tab1, tab2, tab3 = st.tabs(["👤 Demographics", "🧠 Depression (PHQ-8)", "😰 Anxiety (GAD-7)"])
 
@@ -240,28 +240,28 @@ with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
-        boarding_day = st.selectbox("🏫 School Type", ["Boarding", "Day"])
-        school_type = st.selectbox("👥 School Gender", ["Boys", "Girls", "Mixed"])
-        school_demo = st.selectbox("🏙️ School Location", ["Urban", "Rural", "Semi-urban"])
-        school_county = st.selectbox("📍 County", ["Nairobi","Kiambu","Kisumu","Mombasa","Nakuru","Other"])
-        age = st.slider("🎂 Age", min_value=12, max_value=25, value=16)
-        gender = st.selectbox("⚧ Gender", ["Male", "Female"])
+        boarding_day = st.selectbox(" School Type", ["Boarding", "Day","Day & Boarding"])
+        school_type = st.selectbox(" School Gender", ["Boys", "Girls", "Mixed"])
+        school_demo = st.selectbox(" School type", ['Subcounty', 'Extracounty', 'County'])
+        school_county = st.selectbox(" County", ["Nairobi","Kiambu","Makueni","Machakos","Kisumu","Mombasa","Nakuru","Other"])
+        age = st.slider(" Age", min_value=12, max_value=25, value=16)
+        gender = st.selectbox("Gender", ["Male", "Female"])
     
     with col2:
-        form = st.selectbox("📚 Form", [1,2,3,4])
-        religion = st.selectbox("✝️ Religion", ["Christian", "Muslim", "Other"])
-        parents_home = st.selectbox("🏠 Parents Living Situation", ["Both parents", "One parent", "None"])
-        parents_dead = st.number_input("💔 Deceased Parents", min_value=0, max_value=4, value=0)
-        fathers_edu = st.selectbox("👨‍🎓 Father's Education", ["None","Primary","Secondary","Tertiary","University"])
-        mothers_edu = st.selectbox("👩‍🎓 Mother's Education", ["None","Primary","Secondary","Tertiary","University"])
+        form = st.selectbox(" Form", [1,2,3,4])
+        religion = st.selectbox(" Religion", ["Christian", "Muslim", "Other"])
+        parents_home = st.selectbox(" Parents Living Situation", ["Both parents", "One parent", "None"])
+        parents_dead = st.number_input(" Deceased Parents", min_value=0, max_value=4, value=0)
+        fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"])
+        mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"])
     
     col3, col4, col5 = st.columns(3)
     with col3:
-        co_curr = st.selectbox("🎭 Co-curricular Activities", ["Yes", "No"])
+        co_curr = st.selectbox(" Co-curricular Activities", ["Yes", "No"])
     with col4:
-        sports = st.selectbox("⚽ Sports Participation", ["Yes", "No"])
+        sports = st.selectbox("⚽Sports Participation", ["Yes", "No"])
     with col5:
-        acad_ability = st.slider("📖 Academic Self-Rating", 1, 5, 3, help="1=Low, 5=High")
+        acad_ability = st.slider(" Academic Self-Rating", 1,2,4, 5, 3, help="1=Low, 5=High")
 
 with tab2:
     st.markdown("### Depression Screening (PHQ-8)")
@@ -301,15 +301,15 @@ with tab2:
     st.markdown(f"### Current PHQ-8 Score: **{phq_total}** / 24")
     
     if phq_total < 5:
-        st.success("✅ Minimal depression symptoms")
+        st.success("Minimal depression symptoms")
     elif phq_total < 10:
-        st.info("ℹ️ Mild depression symptoms")
+        st.info("ℹMild depression symptoms")
     elif phq_total < 15:
-        st.warning("⚠️ Moderate depression symptoms")
+        st.warning("Moderate depression symptoms")
     elif phq_total < 20:
-        st.warning("⚠️ Moderately severe depression symptoms")
+        st.warning("Moderately severe depression symptoms")
     else:
-        st.error("🚨 Severe depression symptoms")
+        st.error("Severe depression symptoms")
 
 with tab3:
     st.markdown("### Anxiety Screening (GAD-7)")
@@ -346,19 +346,19 @@ with tab3:
     st.markdown(f"### Current GAD-7 Score: **{gad_total}** / 21")
     
     if gad_total < 5:
-        st.success("✅ Minimal anxiety symptoms")
+        st.success("Minimal anxiety symptoms")
     elif gad_total < 10:
-        st.info("ℹ️ Mild anxiety symptoms")
+        st.info("ℹMild anxiety symptoms")
     elif gad_total < 15:
-        st.warning("⚠️ Moderate anxiety symptoms")
+        st.warning("Moderate anxiety symptoms")
     else:
-        st.error("🚨 Severe anxiety symptoms")
+        st.error("Severe anxiety symptoms")
 
 # Submit button
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    submitted = st.button("🔍 Analyze Mental Health Status", use_container_width=True)
+    submitted = st.button("Analyze Mental Health Status", use_container_width=True)
 
 def get_severity_info(score, max_score, assessment_type):
     """Get severity level, color, and recommendations based on validated clinical guidelines"""
@@ -367,148 +367,67 @@ def get_severity_info(score, max_score, assessment_type):
         if score < 5:
             return {
                 'level': 'Minimal',
-                'color': '#28a745',
-                'description': 'Your symptoms are minimal and not significantly impacting daily life.',
-                'recommendations': [
-                    'Maintain healthy lifestyle habits',
-                    'Continue engaging in activities you enjoy',
-                    'Stay connected with friends and family',
-                    'Practice good sleep hygiene'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009). The PHQ-8 as a measure of current depression in the general population. Journal of Affective Disorders.'
-            }
+                'color': '#28a745'
+                 }
         elif score < 10:
             return {
                 'level': 'Mild',
-                'color': '#ffc107',
-                'description': 'You are experiencing mild symptoms that may benefit from self-care strategies.',
-                'recommendations': [
-                    'Engage in regular physical exercise',
-                    'Practice relaxation techniques (meditation, deep breathing)',
-                    'Maintain a regular sleep schedule',
-                    'Talk to someone you trust about how you feel',
-                    'Consider speaking with a school counselor'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO Mental Health Gap Action Programme (mhGAP) guidelines for mild depression management.'
-            }
+                'color': '#ffc107'
+                 }
         elif score < 15:
             return {
                 'level': 'Moderate',
-                'color': '#fd7e14',
-                'description': 'You are experiencing moderate symptoms. Professional support is recommended.',
-                'recommendations': [
-                    '🏥 Speak with a mental health professional or counselor',
-                    'Continue self-care practices',
-                    'Inform a trusted adult or family member',
-                    'Consider therapy or counseling services',
-                    'Avoid isolation - stay connected with others'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & National Institute for Health and Care Excellence (NICE) guidelines for moderate depression.'
-            }
+                'color': '#fd7e14'
+                 }
         elif score < 20:
             return {
                 'level': 'Moderately Severe',
-                'color': '#dc3545',
-                'description': 'You are experiencing moderately severe symptoms. Professional help is strongly recommended.',
-                'recommendations': [
-                    '🏥 Seek professional evaluation from a healthcare provider',
-                    'Contact your school counselor or guidance office',
-                    'Inform your parents or guardian',
-                    'Professional therapy is recommended',
-                    'Do not face this alone - reach out for support'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & American Psychological Association (APA) practice guidelines for moderately severe depression.'
-            }
+                'color': '#dc3545'
+                }
         else:
             return {
                 'level': 'Severe',
-                'color': '#bd2130',
-                'description': 'You are experiencing severe symptoms. Immediate professional evaluation is needed.',
-                'recommendations': [
-                    '🚨 Seek immediate professional evaluation',
-                    'Contact a mental health professional or healthcare provider',
-                    'Inform your parents/guardians immediately',
-                    'Kenya Red Cross: 1199',
-                    'Befrienders Kenya: +254 722 178 177'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO mhGAP guidelines for severe depression requiring immediate clinical attention.'
-            }
+                'color': '#bd2130'
+                 }
     else:  # anxiety
         if score < 5:
             return {
                 'level': 'Minimal',
-                'color': '#28a745',
-                'description': 'Your anxiety symptoms are minimal.',
-                'recommendations': [
-                    'Continue healthy stress management practices',
-                    'Maintain regular exercise routine',
-                    'Practice mindfulness or meditation',
-                    'Get adequate sleep'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006). A brief measure for assessing generalized anxiety disorder. Archives of Internal Medicine.'
-            }
+                'color': '#28a745'
+                }
         elif score < 10:
             return {
                 'level': 'Mild',
                 'color': '#ffc107',
-                'description': 'You are experiencing mild anxiety that may respond to self-management strategies.',
-                'recommendations': [
-                    'Practice deep breathing exercises',
-                    'Try progressive muscle relaxation',
-                    'Limit caffeine intake',
-                    'Maintain regular physical activity',
-                    'Talk to someone you trust'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines for mild anxiety management through psychoeducation and self-help.'
-            }
+                 }
         elif score < 15:
             return {
                 'level': 'Moderate',
-                'color': '#fd7e14',
-                'description': 'You are experiencing moderate anxiety. Professional guidance is recommended.',
-                'recommendations': [
-                    '🏥 Consider speaking with a mental health professional',
-                    'Learn and practice anxiety management techniques',
-                    'Identify and address anxiety triggers',
-                    'Maintain a worry journal',
-                    'Join a support group if available'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines recommending psychological interventions for moderate anxiety.'
-            }
+                 }
         else:
             return {
                 'level': 'Severe',
                 'color': '#dc3545',
-                'description': 'You are experiencing severe anxiety. Professional evaluation is strongly recommended.',
-                'recommendations': [
-                    '🏥 Seek professional evaluation as soon as possible',
-                    'Contact your school counselor immediately',
-                    'Inform your parents or guardian',
-                    'Professional evaluation and support is recommended',
-                    'Practice grounding techniques during anxiety episodes',
-                    'Kenya Red Cross: 1199'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & WHO mhGAP guidelines for severe anxiety requiring clinical evaluation.'
-            }
+                }
 
 if submitted:
-    with st.spinner("🤖 Analyzing your responses..."):
+    with st.spinner(" Analyzing your responses..."):
         input_data = {
-            "Boarding_day": boarding_day,
-            "School_type": school_type,
-            "School_Demographics": school_demo,
-            "School_County": school_county,
-            "Age": age,
-            "Gender": 1 if gender == "Male" else 2,
-            "Form": form,
-            "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
-            "Parents_Home": {"None":0, "One parent":1, "Both parents":2}[parents_home],
-            "Parents_Dead": parents_dead,
-            "Fathers_Education": fathers_edu,
-            "Mothers_Education": mothers_edu,
-            "Co_Curricular": 1 if co_curr == "Yes" else 0,
-            "Sports": 1 if sports == "Yes" else 0,
-            "Percieved_Academic_Abilities": acad_ability
+        "Boarding_day_encoded": {"Boarding": 1, "Day": 2, "Day & Boarding": 3}[boarding_day],
+        "School_type_encoded": {"County": 1, "Extracounty": 2, "Subcounty": 3}[school_type],
+        "School_Demographics_encoded": {"Boys": 1, "Girls": 2, "Mixed": 3}[school_demo],
+        "School_County_encoded": {"Kiambu": 1, "Machakos": 2, "Makueni": 3, "Nairobi": 4}[school_county],
+        "Age": age,
+        "Gender": 1 if gender == "Male" else 2,
+        "Form": form,
+        "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
+        "Parents_Home": {"None": 0, "One parent": 1, "Both parents": 2}[parents_home],
+        "Parents_Dead": parents_dead,
+        "Fathers_Education": {"None": 1, "Primary": 2, "Secondary": 3, "Tertiary": 4, "University": 5}[fathers_edu],
+        "Mothers_Education": {"None": 1, "Primary": 2, "Secondary": 3, "Tertiary": 4, "University": 5}[mothers_edu],
+        "Co_Curricular": 1 if co_curr == "Yes" else 0,
+        "Sports": 1 if sports == "Yes" else 0,
+        "Percieved_Academic_Abilities": acad_ability
         }
         input_data.update(phq)
         input_data.update(gad)
@@ -564,15 +483,15 @@ if submitted:
         # Results Display
         st.balloons()
         st.markdown("---")
-        st.markdown("## 🎯 Your Mental Health Assessment Results")
+        st.markdown("## Your Mental Health Assessment Results")
         st.markdown("*Based on your responses, here's what we found:*")
         
         # Show which models were used
         col_a, col_b = st.columns(2)
         with col_a:
-            st.info(f"🧠 **Depression Model:** {best_dep_model} (Recall: {best_dep_recall:.1%}, Accuracy: {best_dep_acc:.1%})")
+            st.info(f"**Depression Model:** {best_dep_model} (Recall: {best_dep_recall:.1%}, Accuracy: {best_dep_acc:.1%})")
         with col_b:
-            st.info(f"😰 **Anxiety Model:** {best_anx_model} (Recall: {best_anx_recall:.1%}, Accuracy: {best_anx_acc:.1%})")
+            st.info(f"**Anxiety Model:** {best_anx_model} (Recall: {best_anx_recall:.1%}, Accuracy: {best_anx_acc:.1%})")
         
         st.markdown("---")
 
@@ -582,7 +501,7 @@ if submitted:
         with col1:
             st.markdown(f"""
             <div class="score-card" style="background: linear-gradient(135deg, {dep_info['color']}15 0%, {dep_info['color']}30 100%); border-left: 5px solid {dep_info['color']}">
-                <h2 style="margin:0; color: {dep_info['color']}">🧠 Depression Assessment</h2>
+                <h2 style="margin:0; color: {dep_info['color']}"> Depression Assessment</h2>
                 <div class="score-number" style="color: {dep_info['color']}">{phq_total}<span style="font-size:2rem; color: #666">/24</span></div>
                 <div class="score-label" style="color: {dep_info['color']}">{dep_info['level']}</div>
             </div>
@@ -590,18 +509,18 @@ if submitted:
             
             st.markdown(f"**What this means:** {dep_info['description']}")
             
-            st.markdown("#### 💡 Recommended Actions:")
+            st.markdown("#### Recommended Actions:")
             for rec in dep_info['recommendations']:
                 st.markdown(f"- {rec}")
             
-            with st.expander("📚 Clinical Guidelines Reference"):
+            with st.expander("Clinical Guidelines Reference"):
                 st.caption(f"**Source:** {dep_info['source']}")
                 st.caption("**Note:** These are screening recommendations based on standardized PHQ-8 cutoff scores, not clinical diagnoses.")
         
         with col2:
             st.markdown(f"""
             <div class="score-card" style="background: linear-gradient(135deg, {anx_info['color']}15 0%, {anx_info['color']}30 100%); border-left: 5px solid {anx_info['color']}">
-                <h2 style="margin:0; color: {anx_info['color']}">😰 Anxiety Assessment</h2>
+                <h2 style="margin:0; color: {anx_info['color']}"> Anxiety Assessment</h2>
                 <div class="score-number" style="color: {anx_info['color']}">{gad_total}<span style="font-size:2rem; color: #666">/21</span></div>
                 <div class="score-label" style="color: {anx_info['color']}">{anx_info['level']}</div>
             </div>
@@ -609,20 +528,20 @@ if submitted:
             
             st.markdown(f"**What this means:** {anx_info['description']}")
             
-            st.markdown("#### 💡 Recommended Actions:")
+            st.markdown("####  Recommended Actions:")
             for rec in anx_info['recommendations']:
                 st.markdown(f"- {rec}")
             
-            with st.expander("📚 Clinical Guidelines Reference"):
+            with st.expander(" Clinical Guidelines Reference"):
                 st.caption(f"**Source:** {anx_info['source']}")
                 st.caption("**Note:** These are screening recommendations based on standardized GAD-7 cutoff scores, not clinical diagnoses.")
 
         # SHAP Explanations - Enhanced with proper preprocessing
         st.markdown("---")
-        st.markdown("### 🔍 Understanding Your Results")
+        st.markdown("### Understanding Your Results")
         st.markdown("*These charts show which factors had the most influence on your assessment:*")
         
-        tab1, tab2 = st.tabs(["🧠 Depression Factors", "😰 Anxiety Factors"])
+        tab1, tab2 = st.tabs([" Depression Factors", " Anxiety Factors"])
         
         with tab1:
             try:
@@ -698,14 +617,14 @@ if submitted:
                 plt.close()
                 
                 st.info("""
-                📖 **How to read this chart:** 
+                **How to read this chart:** 
                 - Longer bars = stronger influence on your depression assessment
                 - Higher values mean the feature had more impact on the prediction
                 - Features include your survey responses, demographics, and symptoms
                 """)
                 
             except Exception as e:
-                st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
+                st.warning(f"Could not generate explanation chart: {str(e)}")
                 st.info("The AI model made predictions successfully, but we couldn't generate the visual explanation. This doesn't affect the accuracy of your results.")
         
         with tab2:
@@ -779,20 +698,20 @@ if submitted:
                 plt.close()
                 
                 st.info("""
-                📖 **How to read this chart:** 
+                **How to read this chart:** 
                 - Longer bars = stronger influence on your anxiety assessment
                 - Higher values mean the feature had more impact on the prediction
                 - Features include your survey responses, demographics, and symptoms
                 """)
                 
             except Exception as e:
-                st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
+                st.warning(f" Could not generate explanation chart: {str(e)}")
                 st.info("The AI model made predictions successfully, but we couldn't generate the visual explanation. This doesn't affect the accuracy of your results.")
 
         # Technical details in expander
         if selection_mode == "View All Models":
             st.markdown("---")
-            with st.expander("📊 View All Model Predictions", expanded=False):
+            with st.expander(" View All Model Predictions", expanded=False):
                 st.markdown("### Comparison of All Model Predictions")
                 
                 dep_categories = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Moderately Severe', 4: 'Severe'}
@@ -816,14 +735,14 @@ if submitted:
                 df_comparison = pd.DataFrame(comparison_data)
                 st.dataframe(df_comparison, use_container_width=True)
                 
-                st.info("💡 **Note:** Different models may give different predictions. The selected 'best' models are highlighted at the top of the results.")
+                st.info(" **Note:** Different models may give different predictions. The selected 'best' models are highlighted at the top of the results.")
 
         # Download results
         st.markdown("---")
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.markdown("### 💾 Save Your Results")
+            st.markdown("###  Save Your Results")
             st.markdown("Download a comprehensive summary of your assessment to share with a healthcare provider or keep for your records.")
         
         with col2:
@@ -839,12 +758,6 @@ Severity Level: {dep_info['level']}
 Model Used: {best_dep_model}
 Model Performance: Recall {best_dep_recall:.1%}, Accuracy {best_dep_acc:.1%}
 
-What This Means:
-{dep_info['description']}
-
-Recommended Actions:
-{chr(10).join('• ' + rec for rec in dep_info['recommendations'])}
-
 ═══════════════════════════════════════════════════════════
 
 ANXIETY ASSESSMENT (GAD-7)
@@ -852,12 +765,6 @@ Score: {gad_total}/21
 Severity Level: {anx_info['level']}
 Model Used: {best_anx_model}
 Model Performance: Recall {best_anx_recall:.1%}, Accuracy {best_anx_acc:.1%}
-
-What This Means:
-{anx_info['description']}
-
-Recommended Actions:
-{chr(10).join('• ' + rec for rec in anx_info['recommendations'])}
 
 ═══════════════════════════════════════════════════════════
 
@@ -895,17 +802,17 @@ listed above.
         if phq_total >= 15 or gad_total >= 15:
             st.markdown("---")
             st.error("""
-            ### 🚨 IMMEDIATE SUPPORT NEEDED
+            ### IMMEDIATE SUPPORT NEEDED
             
             Your scores indicate significant symptoms. **Please reach out for help immediately.**
             
             #### Crisis Resources in Kenya:
             
-            - 🚑 **Kenya Red Cross:** 1199
-            - 📞 **Befrienders Kenya:** +254 722 178 177
-            - 🏥 **Your school counselor or guidance department**
-            - 👨‍👩‍👧 **A trusted adult, teacher, or family member**
-            - 🏥 **Nearest hospital emergency department**
+            -  **Kenya Red Cross:** 1199
+            -  **Befrienders Kenya:** +254 722 178 177
+            -  **Your school counselor or guidance department**
+            -  **A trusted adult, teacher, or family member**
+            -  **Nearest hospital emergency department**
             
             #### What to do right now:
             
@@ -917,45 +824,28 @@ listed above.
             **Remember:** Seeking help is a sign of strength, not weakness. Many people have been where you are and have found their way to feeling better with the right support.
             """)
 
-        # Final disclaimer - Always visible
+        # Disclaimer
         st.markdown("---")
         st.warning("""
-        ### ⚠️ IMPORTANT DISCLAIMER
+        ### IMPORTANT DISCLAIMER
         
         **This tool is for screening and educational purposes only.** It is **NOT** a diagnostic instrument.
         
         #### Understanding Your Results:
         
-        - ✅ These scores provide an **indication** of symptom severity based on validated screening questionnaires
-        - ✅ Results follow **standardized** PHQ-8 and GAD-7 scoring interpretations
-        - ✅ Should be **discussed** with a qualified mental health professional
-        - ❌ Do **NOT replace** professional clinical assessment or diagnosis
-        - ❌ Should **NOT** be used for self-diagnosis
-        
-        #### Clinical Validity & References:
-        
-        **PHQ-8 (Depression Screening):**
-        - Validated screening tool with sensitivity and specificity >80%
-        - Reference: Kroenke, K., et al. (2009). "The PHQ-8 as a measure of current depression in the general population." *Journal of Affective Disorders, 114*(1-3), 163-173.
-        - Cutoff scores: 5 (mild), 10 (moderate), 15 (moderately severe), 20 (severe)
-        
-        **GAD-7 (Anxiety Screening):**
-        - Validated screening tool for generalized anxiety disorder
-        - Reference: Spitzer, R.L., et al. (2006). "A brief measure for assessing generalized anxiety disorder." *Archives of Internal Medicine, 166*(10), 1092-1097.
-        - Cutoff scores: 5 (mild), 10 (moderate), 15 (severe)
-        
-        **Management Recommendations:**
-        - Based on WHO Mental Health Gap Action Programme (mhGAP) guidelines
-        - NICE (National Institute for Health and Care Excellence) guidelines
-        - American Psychological Association (APA) practice guidelines
+        - These scores provide an **indication** of symptom severity based on validated screening questionnaires
+        - Results follow **standardized** PHQ-8 and GAD-7 scoring interpretations
+        - Should be **discussed** with a qualified mental health professional
+        - Do **NOT replace** professional clinical assessment or diagnosis
+        - Should **NOT** be used for self-diagnosis
         
         #### Recommended Next Steps:
         
-        1. 🏥 **Share these results** with a healthcare provider or school counselor for proper evaluation
-        2. 📋 **Use as a starting point** for a conversation about your mental health
-        3. 🔄 **Re-screen periodically** to monitor symptom changes (recommended every 2-4 weeks)
-        4. 💬 **Talk to someone** you trust about how you're feeling
-        5. 📚 **Seek professional evaluation** if symptoms persist or worsen
+        1. **Share these results** with a healthcare provider or school counselor for proper evaluation
+        2. **Use as a starting point** for a conversation about your mental health
+        3. **Re-screen periodically** to monitor symptom changes (recommended every 2-4 weeks)
+        4. **Talk to someone** you trust about how you're feeling
+        5. **Seek professional evaluation** if symptoms persist or worsen
         
         #### If You Are Experiencing a Crisis:
         
@@ -980,8 +870,7 @@ listed above.
         should be followed up with professional clinical assessment.
         """)
         
-        # Additional resources section
-        with st.expander("📚 Learn More About Mental Health Screening", expanded=False):
+        with st.expander(" Learn More About Mental Health Screening", expanded=False):
             st.markdown("""
             ### About PHQ-8 and GAD-7
             
@@ -1042,31 +931,4 @@ listed above.
             **Mindfulness/Meditation:**
             - 10-20 minutes daily practice
             - Evidence: Reduces anxiety and depression (Khoury et al., 2015, *Clinical Psychology Review*)
-            
-            ### Resources for Students in Kenya
-            
-            **School-Based:**
-            - School counselors and guidance departments
-            - Peer support programs
-            - Student wellness centers
-            
-            **Professional Services:**
-            - Kenya Psychological Association (KPA)
-            - Moi Teaching and Referral Hospital - Mental Health Services
-            - Kenyatta National Hospital - Psychiatric Department
-            - Chiromo Lane Medical Centre - Mental Health Services
-            - Oasis Africa - Youth mental health support
-            
-            **Crisis Support:**
-            - Kenya Red Cross: 1199
-            - Befrienders Kenya: +254 722 178 177
-            - AMREF Health Africa: +254 (0)20 699 3000
-            
-            ### References for Further Reading
-            
-            1. Kroenke, K., et al. (2009). The PHQ-8 as a measure of current depression. *Journal of Affective Disorders*.
-            2. Spitzer, R.L., et al. (2006). A brief measure for assessing GAD. *Archives of Internal Medicine*.
-            3. WHO (2016). mhGAP Intervention Guide for mental, neurological and substance use disorders.
-            4. NICE (2022). Depression in children and young people: identification and management.
-            5. Kenya Mental Health Policy 2015-2030, Ministry of Health, Kenya.
             """)
