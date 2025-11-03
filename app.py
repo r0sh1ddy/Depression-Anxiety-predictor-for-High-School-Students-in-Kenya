@@ -650,7 +650,6 @@ if submitted:
         anx_info = get_severity_info(gad_total, 21, 'anxiety')
 
         # Results Display
-        st.balloons()
         st.markdown("---")
         st.markdown("## 🎯 Your Mental Health Assessment Results")
         st.markdown("*Based on your responses, here's what we found:*")
