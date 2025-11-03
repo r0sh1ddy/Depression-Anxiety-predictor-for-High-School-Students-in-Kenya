@@ -414,8 +414,9 @@ if submitted:
     with st.spinner(" Analyzing your responses..."):
         input_data = {
         "Boarding_day_encoded": {"Boarding": 1, "Day": 2, "Day & Boarding": 3}[boarding_day],
-        "School_type_encoded": {"County": 1, "Extracounty": 2, "Subcounty": 3}[school_type],
-        "School_Demographics_encoded": {"Boys": 1, "Girls": 2, "Mixed": 3}[school_demo],
+        "Boarding_day_encoded": {"Boarding": 1, "Day": 2, "Day & Boarding": 3}[boarding_day],
+        "School_type_encoded": {"Boys": 1, "Girls": 2, "Mixed": 3}[school_type],
+        "School_Demographics_encoded": {"County": 1, "Extracounty": 2, "Subcounty": 3}[school_demo],
         "School_County_encoded": {"Kiambu": 1, "Machakos": 2, "Makueni": 3, "Nairobi": 4}[school_county],
         "Age": age,
         "Gender": 1 if gender == "Male" else 2,
