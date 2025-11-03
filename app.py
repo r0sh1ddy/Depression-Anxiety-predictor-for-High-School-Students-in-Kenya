@@ -261,7 +261,7 @@ with tab1:
     with col4:
         sports = st.selectbox("⚽Sports Participation", ["Yes", "No"])
     with col5:
-        acad_ability = st.slider(" Academic Self-Rating", 1,2,4, 5, 3, help="1=Low, 5=High")
+        acad_ability = st.slider(" Academic Self-Rating", 1, 5, 3, help="1=Low, 5=High")
 
 with tab2:
     st.markdown("### Depression Screening (PHQ-8)")
