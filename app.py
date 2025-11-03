@@ -360,55 +360,29 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     submitted = st.button("Analyze Mental Health Status", use_container_width=True)
 
-def get_severity_info(score, max_score, assessment_type):
-    """Get severity level, color, and recommendations based on validated clinical guidelines"""
-    
-    if assessment_type == 'depression':
+def get_severity_info(score, target="depression"):
+    """Return color and label for each severity level (no recommendations)."""
+    if target == "depression":
         if score < 5:
-            return {
-                'level': 'Minimal',
-                'color': '#28a745'
-                 }
+            return {'level': 'Minimal', 'color': '#4caf50'}
         elif score < 10:
-            return {
-                'level': 'Mild',
-                'color': '#ffc107'
-                 }
+            return {'level': 'Mild', 'color': '#ffc107'}
         elif score < 15:
-            return {
-                'level': 'Moderate',
-                'color': '#fd7e14'
-                 }
+            return {'level': 'Moderate', 'color': '#ff9800'}
         elif score < 20:
-            return {
-                'level': 'Moderately Severe',
-                'color': '#dc3545'
-                }
+            return {'level': 'Moderately Severe', 'color': '#f57c00'}
         else:
-            return {
-                'level': 'Severe',
-                'color': '#bd2130'
-                 }
+            return {'level': 'Severe', 'color': '#f44336'}
     else:  # anxiety
         if score < 5:
-            return {
-                'level': 'Minimal',
-                'color': '#28a745'
-                }
+            return {'level': 'Minimal', 'color': '#4caf50'}
         elif score < 10:
-            return {
-                'level': 'Mild',
-                'color': '#ffc107',
-                 }
+            return {'level': 'Mild', 'color': '#ffc107'}
         elif score < 15:
-            return {
-                'level': 'Moderate',
-                 }
+            return {'level': 'Moderate', 'color': '#ff9800'}
         else:
-            return {
-                'level': 'Severe',
-                'color': '#dc3545',
-                }
+            return {'level': 'Severe', 'color': '#f44336'}
+
 
 if submitted:
     with st.spinner(" Analyzing your responses..."):
@@ -482,7 +456,6 @@ if submitted:
         anx_info = get_severity_info(gad_total, 21, 'anxiety')
 
         # Results Display
-        st.balloons()
         st.markdown("---")
         st.markdown("## Your Mental Health Assessment Results")
         st.markdown("*Based on your responses, here's what we found:*")
