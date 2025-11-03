@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 st.set_page_config(
-    page_title="AdolescentMind - Kenya", 
+    page_title="Mental Health Screening - Kenya", 
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="icon.jpg"
+    page_icon="🧠"
 )
 
 # Custom CSS for better styling
@@ -44,11 +44,12 @@ st.markdown("""
         font-size: 1.2rem;
         font-weight: 600;
     }
-    .contributing-factor {
-        padding: 0.5rem;
-        margin: 0.25rem 0;
-        border-radius: 5px;
-        background: #f0f2f6;
+    .best-model-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        margin: 0.5rem 0;
     }
     .stButton>button {
         width: 100%;
@@ -67,7 +68,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header">AdolescentMind - Kenya</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
 
 BASE = os.path.dirname(__file__)
@@ -86,7 +87,7 @@ if os.path.exists(METRICS_FILE):
 else:
     model_metrics = {}
 
-# Sidebar - Moved technical details here
+# Sidebar - Enhanced with best model display
 with st.sidebar:
     st.title("⚙️ Settings")
     
@@ -109,12 +110,83 @@ with st.sidebar:
 
     st.markdown("---")
     
+    # Show best models for each target
+    if model_metrics:
+        st.markdown("### 🏆 Best Models by Recall")
+        
+        # Find best depression model
+        best_dep_recall = -1
+        best_dep_model_info = None
+        for name, metrics in model_metrics.items():
+            if 'test_recall_per_target' in metrics:
+                dep_recall = metrics['test_recall_per_target'].get('Is_Depressed', 0)
+                if dep_recall > best_dep_recall:
+                    best_dep_recall = dep_recall
+                    best_dep_model_info = (name, metrics)
+        
+        # Find best anxiety model
+        best_anx_recall = -1
+        best_anx_model_info = None
+        for name, metrics in model_metrics.items():
+            if 'test_recall_per_target' in metrics:
+                anx_recall = metrics['test_recall_per_target'].get('Has_anxiety', 0)
+                if anx_recall > best_anx_recall:
+                    best_anx_recall = anx_recall
+                    best_anx_model_info = (name, metrics)
+        
+        # Display Depression Best Model
+        if best_dep_model_info:
+            name, metrics = best_dep_model_info
+            st.markdown("#### 🧠 Depression")
+            st.markdown(f"""
+            <div class="best-model-card">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">Selected Model</div>
+                <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">{name}</div>
+                <div style="display: flex; justify-content: space-around; margin-top: 0.5rem;">
+                    <div>
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Recall</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">{metrics['test_recall_per_target']['Is_Depressed']:.1%}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Accuracy</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">{metrics['test_accuracy_per_target']['Is_Depressed']:.1%}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("")
+        
+        # Display Anxiety Best Model
+        if best_anx_model_info:
+            name, metrics = best_anx_model_info
+            st.markdown("#### 😰 Anxiety")
+            st.markdown(f"""
+            <div class="best-model-card">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">Selected Model</div>
+                <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">{name}</div>
+                <div style="display: flex; justify-content: space-around; margin-top: 0.5rem;">
+                    <div>
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Recall</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">{metrics['test_recall_per_target']['Has_anxiety']:.1%}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Accuracy</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">{metrics['test_accuracy_per_target']['Has_anxiety']:.1%}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
     # Show technical details in expander
-    with st.expander("📊 Technical Details", expanded=False):
+    with st.expander("📊 All Models Comparison", expanded=False):
         if model_metrics:
             view_metric = st.selectbox(
                 "View Metric:",
-                ["Recall", "Accuracy"]
+                ["Recall", "Accuracy"],
+                key="sidebar_metric"
             )
             
             metric_key = 'test_recall_per_target' if view_metric == "Recall" else 'test_accuracy_per_target'
@@ -143,6 +215,9 @@ with st.sidebar:
                     margin=dict(l=20, r=20, t=40, b=20)
                 )
                 st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    st.info("💡 **Note:** Recall measures how well the model identifies people who need support.")
 
 # Main content - Assessment Form
 st.markdown("## 📝 Complete the Assessment")
@@ -276,8 +351,7 @@ with col2:
     submitted = st.button("🔍 Analyze Mental Health Status", use_container_width=True)
 
 def get_severity_info(score, max_score, assessment_type):
-    """Get severity level, color, and recommendations"""
-    percentage = (score / max_score) * 100
+    """Get severity level, color, and recommendations based on validated clinical guidelines"""
     
     if assessment_type == 'depression':
         if score < 5:
@@ -290,7 +364,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Continue engaging in activities you enjoy',
                     'Stay connected with friends and family',
                     'Practice good sleep hygiene'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009). The PHQ-8 as a measure of current depression in the general population. Journal of Affective Disorders.'
             }
         elif score < 10:
             return {
@@ -303,7 +378,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain a regular sleep schedule',
                     'Talk to someone you trust about how you feel',
                     'Consider speaking with a school counselor'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO Mental Health Gap Action Programme (mhGAP) guidelines for mild depression management.'
             }
         elif score < 15:
             return {
@@ -316,7 +392,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Inform a trusted adult or family member',
                     'Consider therapy or counseling services',
                     'Avoid isolation - stay connected with others'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & National Institute for Health and Care Excellence (NICE) guidelines for moderate depression.'
             }
         elif score < 20:
             return {
@@ -324,26 +401,27 @@ def get_severity_info(score, max_score, assessment_type):
                 'color': '#dc3545',
                 'description': 'You are experiencing moderately severe symptoms. Professional help is strongly recommended.',
                 'recommendations': [
-                    '🏥 **Seek professional help immediately**',
+                    '🏥 Seek professional evaluation from a healthcare provider',
                     'Contact your school counselor or guidance office',
                     'Inform your parents or guardian',
                     'Professional therapy is recommended',
                     'Do not face this alone - reach out for support'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & American Psychological Association (APA) practice guidelines for moderately severe depression.'
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#bd2130',
-                'description': 'You are experiencing severe symptoms. Immediate professional intervention is needed.',
+                'description': 'You are experiencing severe symptoms. Immediate professional evaluation is needed.',
                 'recommendations': [
-                    '🚨 **Seek immediate professional help**',
-                    'Contact a mental health crisis line',
-                    'Visit a healthcare facility',
+                    '🚨 Seek immediate professional evaluation',
+                    'Contact a mental health professional or healthcare provider',
                     'Inform your parents/guardians immediately',
                     'Kenya Red Cross: 1199',
                     'Befrienders Kenya: +254 722 178 177'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO mhGAP guidelines for severe depression requiring immediate clinical attention.'
             }
     else:  # anxiety
         if score < 5:
@@ -356,20 +434,22 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain regular exercise routine',
                     'Practice mindfulness or meditation',
                     'Get adequate sleep'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006). A brief measure for assessing generalized anxiety disorder. Archives of Internal Medicine.'
             }
         elif score < 10:
             return {
                 'level': 'Mild',
                 'color': '#ffc107',
-                'description': 'You are experiencing mild anxiety that may respond to relaxation techniques.',
+                'description': 'You are experiencing mild anxiety that may respond to self-management strategies.',
                 'recommendations': [
                     'Practice deep breathing exercises',
                     'Try progressive muscle relaxation',
                     'Limit caffeine intake',
                     'Maintain regular physical activity',
                     'Talk to someone you trust'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines for mild anxiety management through psychoeducation and self-help.'
             }
         elif score < 15:
             return {
@@ -382,24 +462,24 @@ def get_severity_info(score, max_score, assessment_type):
                     'Identify and address anxiety triggers',
                     'Maintain a worry journal',
                     'Join a support group if available'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines recommending psychological interventions for moderate anxiety.'
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#dc3545',
-                'description': 'You are experiencing severe anxiety. Professional support is strongly recommended.',
+                'description': 'You are experiencing severe anxiety. Professional evaluation is strongly recommended.',
                 'recommendations': [
-                    '🏥 **Seek professional help as soon as possible**',
+                    '🏥 Seek professional evaluation as soon as possible',
                     'Contact your school counselor immediately',
                     'Inform your parents or guardian',
-                    'Professional therapy or treatment is needed',
+                    'Professional evaluation and support is recommended',
                     'Practice grounding techniques during anxiety episodes',
                     'Kenya Red Cross: 1199'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & WHO mhGAP guidelines for severe anxiety requiring clinical evaluation.'
             }
-    
-    return info
 
 if submitted:
     with st.spinner("🤖 Analyzing your responses..."):
@@ -445,6 +525,8 @@ if submitted:
             best_anx_model = manual_anx_model
             best_dep_recall = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
             best_anx_recall = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
+            best_dep_acc = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+            best_anx_acc = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
         else:
             # Auto-select best models
             best_dep_model = max(
@@ -459,6 +541,8 @@ if submitted:
             
             best_dep_recall = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
             best_anx_recall = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
+            best_dep_acc = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+            best_anx_acc = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
 
         depression_prediction = all_predictions.get(best_dep_model, {}).get('depression_pred', 'N/A')
         anxiety_prediction = all_predictions.get(best_anx_model, {}).get('anxiety_pred', 'N/A')
@@ -472,6 +556,14 @@ if submitted:
         st.markdown("---")
         st.markdown("## 🎯 Your Mental Health Assessment Results")
         st.markdown("*Based on your responses, here's what we found:*")
+        
+        # Show which models were used
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.info(f"🧠 **Depression Model:** {best_dep_model} (Recall: {best_dep_recall:.1%}, Accuracy: {best_dep_acc:.1%})")
+        with col_b:
+            st.info(f"😰 **Anxiety Model:** {best_anx_model} (Recall: {best_anx_recall:.1%}, Accuracy: {best_anx_acc:.1%})")
+        
         st.markdown("---")
 
         # Main Results Cards
@@ -507,7 +599,7 @@ if submitted:
             for rec in anx_info['recommendations']:
                 st.markdown(f"- {rec}")
 
-        # SHAP Explanations - Fixed implementation
+        # SHAP Explanations - Enhanced with proper preprocessing
         st.markdown("---")
         st.markdown("### 🔍 Understanding Your Results")
         st.markdown("*These charts show which factors had the most influence on your assessment:*")
@@ -520,10 +612,14 @@ if submitted:
                 pre = sel_pipe.named_steps['preprocessor']
                 clf = sel_pipe.named_steps['clf']
                 
-                # Transform input
+                # CRITICAL: Transform converts strings to numbers
                 X_trans = pre.transform(user_df)
                 
-                # Get feature names after transformation
+                # Convert sparse matrix to dense if needed
+                if hasattr(X_trans, 'toarray'):
+                    X_trans = X_trans.toarray()
+                
+                # Get feature names
                 try:
                     feature_names = pre.get_feature_names_out()
                 except:
@@ -531,43 +627,68 @@ if submitted:
                 
                 # Get the depression estimator
                 if hasattr(clf, 'estimators_'):
-                    base_model = clf.estimators_[0]  # Depression is first target
+                    base_model = clf.estimators_[0]
                 else:
                     base_model = clf
                 
-                # Create SHAP explainer
-                explainer = shap.TreeExplainer(base_model)
-                shap_values = explainer.shap_values(X_trans)
+                # Choose explainer based on model type
+                if 'Logistic' in best_dep_model:
+                    explainer = shap.LinearExplainer(base_model, X_trans)
+                    shap_values = explainer.shap_values(X_trans)
+                    if isinstance(shap_values, list):
+                        shap_values = shap_values[0]
+                else:
+                    explainer = shap.TreeExplainer(base_model)
+                    shap_values = explainer.shap_values(X_trans)
+                    
+                    # Handle multi-class output
+                    if isinstance(shap_values, list):
+                        shap_values = np.abs(shap_values).mean(axis=0)
                 
-                # Handle multi-class output
-                if isinstance(shap_values, list):
-                    shap_values = shap_values[1]  # Use positive class
+                # Get mean absolute SHAP values
+                if len(shap_values.shape) > 1:
+                    mean_shap = np.abs(shap_values).mean(axis=0)
+                else:
+                    mean_shap = np.abs(shap_values)
                 
-                # Create visualization
+                # Get top 10 features
+                top_indices = np.argsort(mean_shap)[-10:][::-1]
+                top_features = [feature_names[i] for i in top_indices]
+                top_values = mean_shap[top_indices]
+                
+                # Create improved bar chart
                 fig, ax = plt.subplots(figsize=(10, 6))
-                shap.summary_plot(
-                    shap_values, 
-                    X_trans, 
-                    feature_names=feature_names,
-                    plot_type="bar",
-                    max_display=10,
-                    show=False
-                )
-                plt.title("Factors Contributing to Depression Assessment", fontsize=14, pad=15)
+                colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(top_features)))
+                bars = ax.barh(range(len(top_features)), top_values, color=colors)
+                ax.set_yticks(range(len(top_features)))
+                ax.set_yticklabels(top_features, fontsize=10)
+                ax.set_xlabel('Average Impact on Prediction', fontsize=11)
+                ax.set_title('Top 10 Factors Influencing Depression Assessment', fontsize=13, pad=15, fontweight='bold')
+                ax.invert_yaxis()
+                
+                # Add value labels on bars
+                for i, (bar, val) in enumerate(zip(bars, top_values)):
+                    width = bar.get_width()
+                    ax.text(width, bar.get_y() + bar.get_height()/2, 
+                           f'{val:.3f}', 
+                           ha='left', va='center', fontsize=9, 
+                           color='black', fontweight='bold',
+                           bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
+                
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
                 
                 st.info("""
                 📖 **How to read this chart:** 
-                - Longer bars = stronger influence on your result
-                - These are the top factors that contributed to your depression assessment
-                - Factors can include your survey responses, demographics, and reported symptoms
+                - Longer bars = stronger influence on your depression assessment
+                - Higher values mean the feature had more impact on the prediction
+                - Features include your survey responses, demographics, and symptoms
                 """)
                 
             except Exception as e:
                 st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
-                st.info("The AI model still made predictions, but we couldn't show the contributing factors.")
+                st.info("The AI model made predictions successfully, but we couldn't generate the visual explanation. This doesn't affect the accuracy of your results.")
         
         with tab2:
             try:
@@ -575,8 +696,12 @@ if submitted:
                 pre = sel_pipe.named_steps['preprocessor']
                 clf = sel_pipe.named_steps['clf']
                 
+                # Transform and convert to dense
                 X_trans = pre.transform(user_df)
+                if hasattr(X_trans, 'toarray'):
+                    X_trans = X_trans.toarray()
                 
+                # Get feature names
                 try:
                     feature_names = pre.get_feature_names_out()
                 except:
@@ -584,44 +709,74 @@ if submitted:
                 
                 # Get the anxiety estimator
                 if hasattr(clf, 'estimators_'):
-                    base_model = clf.estimators_[1]  # Anxiety is second target
+                    base_model = clf.estimators_[1]
                 else:
                     base_model = clf
                 
-                explainer = shap.TreeExplainer(base_model)
-                shap_values = explainer.shap_values(X_trans)
+                # Choose explainer based on model type
+                if 'Logistic' in best_anx_model:
+                    explainer = shap.LinearExplainer(base_model, X_trans)
+                    shap_values = explainer.shap_values(X_trans)
+                    if isinstance(shap_values, list):
+                        shap_values = shap_values[0]
+                else:
+                    explainer = shap.TreeExplainer(base_model)
+                    shap_values = explainer.shap_values(X_trans)
+                    
+                    if isinstance(shap_values, list):
+                        shap_values = np.abs(shap_values).mean(axis=0)
                 
-                if isinstance(shap_values, list):
-                    shap_values = shap_values[1]
+                # Get mean absolute SHAP values
+                if len(shap_values.shape) > 1:
+                    mean_shap = np.abs(shap_values).mean(axis=0)
+                else:
+                    mean_shap = np.abs(shap_values)
                 
+                # Get top 10 features
+                top_indices = np.argsort(mean_shap)[-10:][::-1]
+                top_features = [feature_names[i] for i in top_indices]
+                top_values = mean_shap[top_indices]
+                
+                # Create improved bar chart
                 fig, ax = plt.subplots(figsize=(10, 6))
-                shap.summary_plot(
-                    shap_values, 
-                    X_trans, 
-                    feature_names=feature_names,
-                    plot_type="bar",
-                    max_display=10,
-                    show=False
-                )
-                plt.title("Factors Contributing to Anxiety Assessment", fontsize=14, pad=15)
+                colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(top_features)))
+                bars = ax.barh(range(len(top_features)), top_values, color=colors)
+                ax.set_yticks(range(len(top_features)))
+                ax.set_yticklabels(top_features, fontsize=10)
+                ax.set_xlabel('Average Impact on Prediction', fontsize=11)
+                ax.set_title('Top 10 Factors Influencing Anxiety Assessment', fontsize=13, pad=15, fontweight='bold')
+                ax.invert_yaxis()
+                
+                # Add value labels on bars
+                for i, (bar, val) in enumerate(zip(bars, top_values)):
+                    width = bar.get_width()
+                    ax.text(width, bar.get_y() + bar.get_height()/2, 
+                           f'{val:.3f}', 
+                           ha='left', va='center', fontsize=9, 
+                           color='black', fontweight='bold',
+                           bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
+                
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
                 
                 st.info("""
                 📖 **How to read this chart:** 
-                - Longer bars = stronger influence on your result
-                - These are the top factors that contributed to your anxiety assessment
-                - Factors can include your survey responses, demographics, and reported symptoms
+                - Longer bars = stronger influence on your anxiety assessment
+                - Higher values mean the feature had more impact on the prediction
+                - Features include your survey responses, demographics, and symptoms
                 """)
                 
             except Exception as e:
                 st.warning(f"⚠️ Could not generate explanation chart: {str(e)}")
-                st.info("The AI model still made predictions, but we couldn't show the contributing factors.")
+                st.info("The AI model made predictions successfully, but we couldn't generate the visual explanation. This doesn't affect the accuracy of your results.")
 
         # Technical details in expander
         if selection_mode == "View All Models":
+            st.markdown("---")
             with st.expander("📊 View All Model Predictions", expanded=False):
+                st.markdown("### Comparison of All Model Predictions")
+                
                 dep_categories = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Moderately Severe', 4: 'Severe'}
                 anx_categories = {0: 'Minimal', 1: 'Mild', 2: 'Moderate', 3: 'Severe'}
                 
@@ -640,7 +795,10 @@ if submitted:
                         "Anx Accuracy": f"{metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0):.1%}"
                     })
                 
-                st.dataframe(pd.DataFrame(comparison_data), use_container_width=True)
+                df_comparison = pd.DataFrame(comparison_data)
+                st.dataframe(df_comparison, use_container_width=True)
+                
+                st.info("💡 **Note:** Different models may give different predictions. The selected 'best' models are highlighted at the top of the results.")
 
         # Download results
         st.markdown("---")
@@ -648,38 +806,67 @@ if submitted:
         
         with col1:
             st.markdown("### 💾 Save Your Results")
-            st.markdown("Download a summary of your assessment to share with a healthcare provider.")
+            st.markdown("Download a comprehensive summary of your assessment to share with a healthcare provider or keep for your records.")
         
         with col2:
             results_summary = f"""MENTAL HEALTH SCREENING RESULTS
 Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
+Generated by: Mental Health Screening Tool - Kenya
+
+═══════════════════════════════════════════════════════════
 
 DEPRESSION ASSESSMENT (PHQ-8)
 Score: {phq_total}/24
-Severity: {dep_info['level']}
-Description: {dep_info['description']}
+Severity Level: {dep_info['level']}
+Model Used: {best_dep_model}
+Model Performance: Recall {best_dep_recall:.1%}, Accuracy {best_dep_acc:.1%}
 
-Recommendations:
-{chr(10).join('- ' + rec for rec in dep_info['recommendations'])}
+What This Means:
+{dep_info['description']}
+
+Recommended Actions:
+{chr(10).join('• ' + rec for rec in dep_info['recommendations'])}
+
+═══════════════════════════════════════════════════════════
 
 ANXIETY ASSESSMENT (GAD-7)
 Score: {gad_total}/21
-Severity: {anx_info['level']}
-Description: {anx_info['description']}
+Severity Level: {anx_info['level']}
+Model Used: {best_anx_model}
+Model Performance: Recall {best_anx_recall:.1%}, Accuracy {best_anx_acc:.1%}
 
-Recommendations:
-{chr(10).join('- ' + rec for rec in anx_info['recommendations'])}
+What This Means:
+{anx_info['description']}
 
-TECHNICAL DETAILS
-Depression Model: {best_dep_model} (Recall: {best_dep_recall:.1%})
-Anxiety Model: {best_anx_model} (Recall: {best_anx_recall:.1%})
+Recommended Actions:
+{chr(10).join('• ' + rec for rec in anx_info['recommendations'])}
 
-IMPORTANT: This is a screening tool, not a diagnosis.
-Please consult a healthcare professional for proper evaluation.
+═══════════════════════════════════════════════════════════
+
+CRISIS RESOURCES (Available 24/7)
+• Kenya Red Cross: 1199
+• Befrienders Kenya: +254 722 178 177
+• Your school counselor or guidance department
+
+═══════════════════════════════════════════════════════════
+
+IMPORTANT DISCLAIMER:
+This is a screening tool for educational purposes only.
+It is NOT a diagnostic instrument.
+
+These results should be discussed with a qualified mental 
+health professional. They do not replace professional 
+clinical assessment.
+
+If you are experiencing a mental health crisis, please 
+seek immediate professional help or call the crisis lines 
+listed above.
+
+═══════════════════════════════════════════════════════════
 """
             
             st.download_button(
-                label="📥 Download Report",
+                label="📥 Download Full Report",
                 data=results_summary,
                 file_name=f"mental_health_screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
                 mime="text/plain",
@@ -692,39 +879,110 @@ Please consult a healthcare professional for proper evaluation.
             st.error("""
             ### 🚨 IMMEDIATE SUPPORT NEEDED
             
-            Your scores indicate significant symptoms. Please reach out for help immediately:
+            Your scores indicate significant symptoms. **Please reach out for help immediately.**
             
-            **Crisis Resources in Kenya:**
+            #### Crisis Resources in Kenya:
+            
             - 🚑 **Kenya Red Cross:** 1199
             - 📞 **Befrienders Kenya:** +254 722 178 177
             - 🏥 **Your school counselor or guidance department**
             - 👨‍👩‍👧 **A trusted adult, teacher, or family member**
+            - 🏥 **Nearest hospital emergency department**
             
-            **You are not alone. Help is available and recovery is possible.**
+            #### What to do right now:
+            
+            1. **Don't wait** - Reach out to one of the resources above
+            2. **Tell someone** - Share how you're feeling with a trusted person
+            3. **Stay safe** - If you're having thoughts of self-harm, go to the nearest emergency room
+            4. **You are not alone** - Help is available and recovery is possible
+            
+            **Remember:** Seeking help is a sign of strength, not weakness. Many people have been where you are and have found their way to feeling better with the right support.
             """)
 
-        # Final disclaimer
+        # Final disclaimer - Always visible
         st.markdown("---")
         st.warning("""
         ### ⚠️ IMPORTANT DISCLAIMER
         
-        This tool is for **screening and educational purposes only**. It is **NOT** a diagnostic instrument.
+        **This tool is for screening and educational purposes only.** It is **NOT** a diagnostic instrument.
         
-        **The results:**
-        - Provide an indication of symptom severity
-        - Are based on standardized mental health screening questionnaires (PHQ-8 and GAD-7)
-        - Should be discussed with a qualified mental health professional
-        - Do not replace professional clinical assessment
+        #### Understanding Your Results:
         
-        **Next Steps:**
-        - 🏥 Share these results with a healthcare provider or counselor
-        - 📋 Use this as a starting point for a conversation about your mental health
-        - 🔄 Consider re-taking this assessment periodically to track changes
-        - 💬 Talk to someone you trust about how you're feeling
+        - ✅ These scores provide an **indication** of symptom severity
+        - ✅ Results are based on **standardized** mental health screening questionnaires (PHQ-8 and GAD-7)
+        - ✅ Should be **discussed** with a qualified mental health professional
+        - ❌ Do **NOT replace** professional clinical assessment
+        - ❌ Should **NOT** be used for self-diagnosis
         
-        **If you are experiencing a mental health crisis:**
-        - Kenya Red Cross: **1199**
-        - Befrienders Kenya: **+254 722 178 177**
-        - Your school counselor or guidance department
-        - Go to the nearest hospital emergency department
+        #### Recommended Next Steps:
+        
+        1. 🏥 **Share these results** with a healthcare provider or school counselor
+        2. 📋 **Use as a starting point** for a conversation about your mental health
+        3. 🔄 **Re-take periodically** to track changes over time (e.g., every 2-4 weeks)
+        4. 💬 **Talk to someone** you trust about how you're feeling
+        5. 📚 **Learn more** about mental health and available support services
+        
+        #### If You Are Experiencing a Crisis:
+        
+        - **Kenya Red Cross:** 1199 (24/7)
+        - **Befrienders Kenya:** +254 722 178 177 (24/7)
+        - **Your school counselor** or guidance department
+        - **Nearest hospital** emergency department
+        
+        #### About the Models:
+        
+        This tool uses machine learning models trained on data from Kenyan high school students. 
+        The models are designed to be sensitive (high recall) to ensure we don't miss students who may need support. 
+        However, they are screening tools only and their predictions should always be validated by healthcare professionals.
+        
+        **Model Performance:**
+        - Depression Model ({best_dep_model}): {best_dep_recall:.1%} recall, {best_dep_acc:.1%} accuracy
+        - Anxiety Model ({best_anx_model}): {best_anx_recall:.1%} recall, {best_anx_acc:.1%} accuracy
+        
+        *Recall measures how well the model identifies people who need support.*
         """)
+        
+        # Additional resources section
+        with st.expander("📚 Learn More About Mental Health", expanded=False):
+            st.markdown("""
+            ### Understanding Depression and Anxiety
+            
+            **Depression** is more than just feeling sad. It's a serious mental health condition that affects how you think, feel, and handle daily activities.
+            
+            **Anxiety** is more than just feeling stressed or worried. It's persistent feelings of worry, nervousness, or fear that interfere with daily life.
+            
+            ### When to Seek Help
+            
+            Consider professional help if:
+            - Symptoms persist for more than 2 weeks
+            - Symptoms interfere with school, relationships, or daily activities
+            - You have thoughts of self-harm or suicide
+            - You're using substances to cope
+            - Your loved ones have expressed concern
+            
+            ### What to Expect from Professional Help
+            
+            - **Assessment:** A thorough evaluation of your symptoms and history
+            - **Treatment Options:** May include therapy, medication, lifestyle changes, or a combination
+            - **Confidentiality:** Your information is kept private (with some exceptions for safety)
+            - **Support:** Ongoing care and monitoring of your progress
+            
+            ### Self-Care Strategies
+            
+            While professional help is important, these strategies can also help:
+            - Regular physical exercise (at least 30 minutes daily)
+            - Healthy sleep routine (7-9 hours per night)
+            - Balanced nutrition
+            - Social connections with friends and family
+            - Mindfulness and relaxation techniques
+            - Limiting alcohol and avoiding drugs
+            - Engaging in hobbies and activities you enjoy
+            
+            ### Resources for Students in Kenya
+            
+            - **School Counselors:** Most schools have counseling services
+            - **Kenya Psychological Association:** Professional therapists nationwide
+            - **Moi Teaching and Referral Hospital:** Mental health services
+            - **Kenyatta National Hospital:** Psychiatric services
+            - **Chiromo Lane Medical Centre:** Private mental health services
+            """)
