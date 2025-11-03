@@ -351,7 +351,7 @@ with col2:
     submitted = st.button("🔍 Analyze Mental Health Status", use_container_width=True)
 
 def get_severity_info(score, max_score, assessment_type):
-    """Get severity level, color, and recommendations based on validated clinical guidelines"""
+    """Get severity level, color, and recommendations"""
     
     if assessment_type == 'depression':
         if score < 5:
@@ -364,8 +364,7 @@ def get_severity_info(score, max_score, assessment_type):
                     'Continue engaging in activities you enjoy',
                     'Stay connected with friends and family',
                     'Practice good sleep hygiene'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009). The PHQ-8 as a measure of current depression in the general population. Journal of Affective Disorders.'
+                ]
             }
         elif score < 10:
             return {
@@ -378,8 +377,7 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain a regular sleep schedule',
                     'Talk to someone you trust about how you feel',
                     'Consider speaking with a school counselor'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO Mental Health Gap Action Programme (mhGAP) guidelines for mild depression management.'
+                ]
             }
         elif score < 15:
             return {
@@ -392,8 +390,7 @@ def get_severity_info(score, max_score, assessment_type):
                     'Inform a trusted adult or family member',
                     'Consider therapy or counseling services',
                     'Avoid isolation - stay connected with others'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & National Institute for Health and Care Excellence (NICE) guidelines for moderate depression.'
+                ]
             }
         elif score < 20:
             return {
@@ -401,27 +398,26 @@ def get_severity_info(score, max_score, assessment_type):
                 'color': '#dc3545',
                 'description': 'You are experiencing moderately severe symptoms. Professional help is strongly recommended.',
                 'recommendations': [
-                    '🏥 Seek professional evaluation from a healthcare provider',
+                    '🏥 **Seek professional help immediately**',
                     'Contact your school counselor or guidance office',
                     'Inform your parents or guardian',
                     'Professional therapy is recommended',
                     'Do not face this alone - reach out for support'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & American Psychological Association (APA) practice guidelines for moderately severe depression.'
+                ]
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#bd2130',
-                'description': 'You are experiencing severe symptoms. Immediate professional evaluation is needed.',
+                'description': 'You are experiencing severe symptoms. Immediate professional intervention is needed.',
                 'recommendations': [
-                    '🚨 Seek immediate professional evaluation',
-                    'Contact a mental health professional or healthcare provider',
+                    '🚨 **Seek immediate professional help**',
+                    'Contact a mental health crisis line',
+                    'Visit a healthcare facility',
                     'Inform your parents/guardians immediately',
                     'Kenya Red Cross: 1199',
                     'Befrienders Kenya: +254 722 178 177'
-                ],
-                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO mhGAP guidelines for severe depression requiring immediate clinical attention.'
+                ]
             }
     else:  # anxiety
         if score < 5:
@@ -434,22 +430,20 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain regular exercise routine',
                     'Practice mindfulness or meditation',
                     'Get adequate sleep'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006). A brief measure for assessing generalized anxiety disorder. Archives of Internal Medicine.'
+                ]
             }
         elif score < 10:
             return {
                 'level': 'Mild',
                 'color': '#ffc107',
-                'description': 'You are experiencing mild anxiety that may respond to self-management strategies.',
+                'description': 'You are experiencing mild anxiety that may respond to relaxation techniques.',
                 'recommendations': [
                     'Practice deep breathing exercises',
                     'Try progressive muscle relaxation',
                     'Limit caffeine intake',
                     'Maintain regular physical activity',
                     'Talk to someone you trust'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines for mild anxiety management through psychoeducation and self-help.'
+                ]
             }
         elif score < 15:
             return {
@@ -462,23 +456,21 @@ def get_severity_info(score, max_score, assessment_type):
                     'Identify and address anxiety triggers',
                     'Maintain a worry journal',
                     'Join a support group if available'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines recommending psychological interventions for moderate anxiety.'
+                ]
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#dc3545',
-                'description': 'You are experiencing severe anxiety. Professional evaluation is strongly recommended.',
+                'description': 'You are experiencing severe anxiety. Professional support is strongly recommended.',
                 'recommendations': [
-                    '🏥 Seek professional evaluation as soon as possible',
+                    '🏥 **Seek professional help as soon as possible**',
                     'Contact your school counselor immediately',
                     'Inform your parents or guardian',
-                    'Professional evaluation and support is recommended',
+                    'Professional therapy or treatment is needed',
                     'Practice grounding techniques during anxiety episodes',
                     'Kenya Red Cross: 1199'
-                ],
-                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & WHO mhGAP guidelines for severe anxiety requiring clinical evaluation.'
+                ]
             }
 
 if submitted:
