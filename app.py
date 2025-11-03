@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 st.set_page_config(
-    page_title="Mental Health Screening - Kenya", 
+    page_title="AdolescentMind - Kenya", 
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🧠"
+    page_icon="icon.jpg"
 )
 
 # Custom CSS for better styling
@@ -67,7 +67,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">AdolescentMind - Kenya</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
 
 BASE = os.path.dirname(__file__)
