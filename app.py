@@ -68,10 +68,20 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
+# Header with optional custom logo
+BASE = os.path.dirname(__file__)
+LOGO_PATH = os.path.join(BASE, "images", "logo.png")  # Place your logo here
+
+# Display logo if available
+if os.path.exists(LOGO_PATH):
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image(LOGO_PATH, use_container_width=True)
+else:
+    st.markdown('<div class="main-header">🧠 Mental Health Screening Tool</div>', unsafe_allow_html=True)
+
 st.markdown('<div class="sub-header">Depression & Anxiety Assessment for Kenyan High School Students</div>', unsafe_allow_html=True)
 
-BASE = os.path.dirname(__file__)
 PIPELINE_FILE = os.path.join(BASE, "trained_pipelines.pkl")
 METRICS_FILE = os.path.join(BASE, "model_metrics.pkl")
 
@@ -351,7 +361,7 @@ with col2:
     submitted = st.button("🔍 Analyze Mental Health Status", use_container_width=True)
 
 def get_severity_info(score, max_score, assessment_type):
-    """Get severity level, color, and recommendations"""
+    """Get severity level, color, and recommendations based on validated clinical guidelines"""
     
     if assessment_type == 'depression':
         if score < 5:
@@ -364,7 +374,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Continue engaging in activities you enjoy',
                     'Stay connected with friends and family',
                     'Practice good sleep hygiene'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009). The PHQ-8 as a measure of current depression in the general population. Journal of Affective Disorders.'
             }
         elif score < 10:
             return {
@@ -377,7 +388,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain a regular sleep schedule',
                     'Talk to someone you trust about how you feel',
                     'Consider speaking with a school counselor'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO Mental Health Gap Action Programme (mhGAP) guidelines for mild depression management.'
             }
         elif score < 15:
             return {
@@ -390,7 +402,8 @@ def get_severity_info(score, max_score, assessment_type):
                     'Inform a trusted adult or family member',
                     'Consider therapy or counseling services',
                     'Avoid isolation - stay connected with others'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & National Institute for Health and Care Excellence (NICE) guidelines for moderate depression.'
             }
         elif score < 20:
             return {
@@ -398,26 +411,27 @@ def get_severity_info(score, max_score, assessment_type):
                 'color': '#dc3545',
                 'description': 'You are experiencing moderately severe symptoms. Professional help is strongly recommended.',
                 'recommendations': [
-                    '🏥 **Seek professional help immediately**',
+                    '🏥 Seek professional evaluation from a healthcare provider',
                     'Contact your school counselor or guidance office',
                     'Inform your parents or guardian',
                     'Professional therapy is recommended',
                     'Do not face this alone - reach out for support'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & American Psychological Association (APA) practice guidelines for moderately severe depression.'
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#bd2130',
-                'description': 'You are experiencing severe symptoms. Immediate professional intervention is needed.',
+                'description': 'You are experiencing severe symptoms. Immediate professional evaluation is needed.',
                 'recommendations': [
-                    '🚨 **Seek immediate professional help**',
-                    'Contact a mental health crisis line',
-                    'Visit a healthcare facility',
+                    '🚨 Seek immediate professional evaluation',
+                    'Contact a mental health professional or healthcare provider',
                     'Inform your parents/guardians immediately',
                     'Kenya Red Cross: 1199',
                     'Befrienders Kenya: +254 722 178 177'
-                ]
+                ],
+                'source': 'PHQ-8 Interpretation: Kroenke et al. (2009) & WHO mhGAP guidelines for severe depression requiring immediate clinical attention.'
             }
     else:  # anxiety
         if score < 5:
@@ -430,20 +444,22 @@ def get_severity_info(score, max_score, assessment_type):
                     'Maintain regular exercise routine',
                     'Practice mindfulness or meditation',
                     'Get adequate sleep'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006). A brief measure for assessing generalized anxiety disorder. Archives of Internal Medicine.'
             }
         elif score < 10:
             return {
                 'level': 'Mild',
                 'color': '#ffc107',
-                'description': 'You are experiencing mild anxiety that may respond to relaxation techniques.',
+                'description': 'You are experiencing mild anxiety that may respond to self-management strategies.',
                 'recommendations': [
                     'Practice deep breathing exercises',
                     'Try progressive muscle relaxation',
                     'Limit caffeine intake',
                     'Maintain regular physical activity',
                     'Talk to someone you trust'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines for mild anxiety management through psychoeducation and self-help.'
             }
         elif score < 15:
             return {
@@ -456,21 +472,23 @@ def get_severity_info(score, max_score, assessment_type):
                     'Identify and address anxiety triggers',
                     'Maintain a worry journal',
                     'Join a support group if available'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & NICE guidelines recommending psychological interventions for moderate anxiety.'
             }
         else:
             return {
                 'level': 'Severe',
                 'color': '#dc3545',
-                'description': 'You are experiencing severe anxiety. Professional support is strongly recommended.',
+                'description': 'You are experiencing severe anxiety. Professional evaluation is strongly recommended.',
                 'recommendations': [
-                    '🏥 **Seek professional help as soon as possible**',
+                    '🏥 Seek professional evaluation as soon as possible',
                     'Contact your school counselor immediately',
                     'Inform your parents or guardian',
-                    'Professional therapy or treatment is needed',
+                    'Professional evaluation and support is recommended',
                     'Practice grounding techniques during anxiety episodes',
                     'Kenya Red Cross: 1199'
-                ]
+                ],
+                'source': 'GAD-7 Interpretation: Spitzer et al. (2006) & WHO mhGAP guidelines for severe anxiety requiring clinical evaluation.'
             }
 
 if submitted:
@@ -575,6 +593,10 @@ if submitted:
             st.markdown("#### 💡 Recommended Actions:")
             for rec in dep_info['recommendations']:
                 st.markdown(f"- {rec}")
+            
+            with st.expander("📚 Clinical Guidelines Reference"):
+                st.caption(f"**Source:** {dep_info['source']}")
+                st.caption("**Note:** These are screening recommendations based on standardized PHQ-8 cutoff scores, not clinical diagnoses.")
         
         with col2:
             st.markdown(f"""
@@ -590,6 +612,10 @@ if submitted:
             st.markdown("#### 💡 Recommended Actions:")
             for rec in anx_info['recommendations']:
                 st.markdown(f"- {rec}")
+            
+            with st.expander("📚 Clinical Guidelines Reference"):
+                st.caption(f"**Source:** {anx_info['source']}")
+                st.caption("**Note:** These are screening recommendations based on standardized GAD-7 cutoff scores, not clinical diagnoses.")
 
         # SHAP Explanations - Enhanced with proper preprocessing
         st.markdown("---")
@@ -900,19 +926,36 @@ listed above.
         
         #### Understanding Your Results:
         
-        - ✅ These scores provide an **indication** of symptom severity
-        - ✅ Results are based on **standardized** mental health screening questionnaires (PHQ-8 and GAD-7)
+        - ✅ These scores provide an **indication** of symptom severity based on validated screening questionnaires
+        - ✅ Results follow **standardized** PHQ-8 and GAD-7 scoring interpretations
         - ✅ Should be **discussed** with a qualified mental health professional
-        - ❌ Do **NOT replace** professional clinical assessment
+        - ❌ Do **NOT replace** professional clinical assessment or diagnosis
         - ❌ Should **NOT** be used for self-diagnosis
+        
+        #### Clinical Validity & References:
+        
+        **PHQ-8 (Depression Screening):**
+        - Validated screening tool with sensitivity and specificity >80%
+        - Reference: Kroenke, K., et al. (2009). "The PHQ-8 as a measure of current depression in the general population." *Journal of Affective Disorders, 114*(1-3), 163-173.
+        - Cutoff scores: 5 (mild), 10 (moderate), 15 (moderately severe), 20 (severe)
+        
+        **GAD-7 (Anxiety Screening):**
+        - Validated screening tool for generalized anxiety disorder
+        - Reference: Spitzer, R.L., et al. (2006). "A brief measure for assessing generalized anxiety disorder." *Archives of Internal Medicine, 166*(10), 1092-1097.
+        - Cutoff scores: 5 (mild), 10 (moderate), 15 (severe)
+        
+        **Management Recommendations:**
+        - Based on WHO Mental Health Gap Action Programme (mhGAP) guidelines
+        - NICE (National Institute for Health and Care Excellence) guidelines
+        - American Psychological Association (APA) practice guidelines
         
         #### Recommended Next Steps:
         
-        1. 🏥 **Share these results** with a healthcare provider or school counselor
+        1. 🏥 **Share these results** with a healthcare provider or school counselor for proper evaluation
         2. 📋 **Use as a starting point** for a conversation about your mental health
-        3. 🔄 **Re-take periodically** to track changes over time (e.g., every 2-4 weeks)
+        3. 🔄 **Re-screen periodically** to monitor symptom changes (recommended every 2-4 weeks)
         4. 💬 **Talk to someone** you trust about how you're feeling
-        5. 📚 **Learn more** about mental health and available support services
+        5. 📚 **Seek professional evaluation** if symptoms persist or worsen
         
         #### If You Are Experiencing a Crisis:
         
@@ -921,60 +964,109 @@ listed above.
         - **Your school counselor** or guidance department
         - **Nearest hospital** emergency department
         
-        #### About the Models:
+        #### About the Machine Learning Models:
         
         This tool uses machine learning models trained on data from Kenyan high school students. 
-        The models are designed to be sensitive (high recall) to ensure we don't miss students who may need support. 
-        However, they are screening tools only and their predictions should always be validated by healthcare professionals.
+        The models predict symptom severity levels to **identify students who may benefit from further evaluation**.
+        They are designed with high recall (sensitivity) to minimize false negatives.
         
         **Model Performance:**
         - Depression Model ({best_dep_model}): {best_dep_recall:.1%} recall, {best_dep_acc:.1%} accuracy
         - Anxiety Model ({best_anx_model}): {best_anx_recall:.1%} recall, {best_anx_acc:.1%} accuracy
         
-        *Recall measures how well the model identifies people who need support.*
+        *Recall measures the model's ability to correctly identify students with symptoms.*
+        
+        **Important:** The models provide **screening predictions**, not clinical diagnoses. All positive screenings 
+        should be followed up with professional clinical assessment.
         """)
         
         # Additional resources section
-        with st.expander("📚 Learn More About Mental Health", expanded=False):
+        with st.expander("📚 Learn More About Mental Health Screening", expanded=False):
             st.markdown("""
-            ### Understanding Depression and Anxiety
+            ### About PHQ-8 and GAD-7
             
-            **Depression** is more than just feeling sad. It's a serious mental health condition that affects how you think, feel, and handle daily activities.
+            **PHQ-8 (Patient Health Questionnaire-8)**
+            - Validated screening tool for depression
+            - Based on DSM-IV diagnostic criteria
+            - Widely used in primary care and research settings
+            - Measures symptom frequency over past 2 weeks
+            - Score ranges: 0-24
             
-            **Anxiety** is more than just feeling stressed or worried. It's persistent feelings of worry, nervousness, or fear that interfere with daily life.
+            **GAD-7 (Generalized Anxiety Disorder-7)**
+            - Validated screening tool for anxiety disorders
+            - Developed for primary care settings
+            - Measures anxiety symptom severity over past 2 weeks
+            - Score ranges: 0-21
+            - Also sensitive to panic disorder, social anxiety, and PTSD
             
-            ### When to Seek Help
+            ### Understanding Screening vs. Diagnosis
             
-            Consider professional help if:
+            **Screening** (What this tool does):
+            - Identifies individuals who may need further evaluation
+            - Uses standardized questionnaires
+            - Provides symptom severity indicators
+            - First step in identifying mental health concerns
+            
+            **Diagnosis** (Requires professional):
+            - Comprehensive clinical assessment
+            - Conducted by qualified mental health professional
+            - Considers full history, context, and clinical presentation
+            - May include additional assessments and interviews
+            - Results in formal diagnostic classification
+            
+            ### When Professional Evaluation is Recommended
+            
+            Based on clinical guidelines, consider professional evaluation if:
+            - PHQ-8 score ≥10 (moderate depression or higher)
+            - GAD-7 score ≥10 (moderate anxiety or higher)
             - Symptoms persist for more than 2 weeks
-            - Symptoms interfere with school, relationships, or daily activities
-            - You have thoughts of self-harm or suicide
-            - You're using substances to cope
-            - Your loved ones have expressed concern
+            - Symptoms interfere with daily functioning
+            - You have concerns about your mental health
             
-            ### What to Expect from Professional Help
+            ### Evidence-Based Self-Care (for Minimal to Mild Symptoms)
             
-            - **Assessment:** A thorough evaluation of your symptoms and history
-            - **Treatment Options:** May include therapy, medication, lifestyle changes, or a combination
-            - **Confidentiality:** Your information is kept private (with some exceptions for safety)
-            - **Support:** Ongoing care and monitoring of your progress
+            Research-supported strategies that may help:
             
-            ### Self-Care Strategies
+            **Physical Activity:**
+            - 30+ minutes of moderate exercise, 5 days/week
+            - Evidence: Reduces depression and anxiety symptoms (Schuch et al., 2016, *Journal of Psychiatric Research*)
             
-            While professional help is important, these strategies can also help:
-            - Regular physical exercise (at least 30 minutes daily)
-            - Healthy sleep routine (7-9 hours per night)
-            - Balanced nutrition
-            - Social connections with friends and family
-            - Mindfulness and relaxation techniques
-            - Limiting alcohol and avoiding drugs
-            - Engaging in hobbies and activities you enjoy
+            **Sleep Hygiene:**
+            - Consistent sleep schedule (7-9 hours)
+            - Evidence: Poor sleep strongly linked to mental health issues (Alvaro et al., 2013, *Sleep Medicine Reviews*)
+            
+            **Social Connection:**
+            - Regular interaction with supportive people
+            - Evidence: Social support protects against depression (Santini et al., 2015, *Journal of Affective Disorders*)
+            
+            **Mindfulness/Meditation:**
+            - 10-20 minutes daily practice
+            - Evidence: Reduces anxiety and depression (Khoury et al., 2015, *Clinical Psychology Review*)
             
             ### Resources for Students in Kenya
             
-            - **School Counselors:** Most schools have counseling services
-            - **Kenya Psychological Association:** Professional therapists nationwide
-            - **Moi Teaching and Referral Hospital:** Mental health services
-            - **Kenyatta National Hospital:** Psychiatric services
-            - **Chiromo Lane Medical Centre:** Private mental health services
+            **School-Based:**
+            - School counselors and guidance departments
+            - Peer support programs
+            - Student wellness centers
+            
+            **Professional Services:**
+            - Kenya Psychological Association (KPA)
+            - Moi Teaching and Referral Hospital - Mental Health Services
+            - Kenyatta National Hospital - Psychiatric Department
+            - Chiromo Lane Medical Centre - Mental Health Services
+            - Oasis Africa - Youth mental health support
+            
+            **Crisis Support:**
+            - Kenya Red Cross: 1199
+            - Befrienders Kenya: +254 722 178 177
+            - AMREF Health Africa: +254 (0)20 699 3000
+            
+            ### References for Further Reading
+            
+            1. Kroenke, K., et al. (2009). The PHQ-8 as a measure of current depression. *Journal of Affective Disorders*.
+            2. Spitzer, R.L., et al. (2006). A brief measure for assessing GAD. *Archives of Internal Medicine*.
+            3. WHO (2016). mhGAP Intervention Guide for mental, neurological and substance use disorders.
+            4. NICE (2022). Depression in children and young people: identification and management.
+            5. Kenya Mental Health Policy 2015-2030, Ministry of Health, Kenya.
             """)
