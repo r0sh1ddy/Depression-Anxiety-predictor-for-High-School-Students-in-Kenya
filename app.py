@@ -4,7 +4,7 @@ import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-TEST_DATA_FILE = os.path.join(BASE, "test_data.pkl")  # or "test_data.csv"
+TEST_DATA_FILE = os.path.join(BASE, "test_data.csv") 
 
 test_data = None
 if os.path.exists(TEST_DATA_FILE):
@@ -14,11 +14,11 @@ if os.path.exists(TEST_DATA_FILE):
                 test_data = pickle.load(f)
         else:  # CSV
             test_data = pd.read_csv(TEST_DATA_FILE)
-        st.sidebar.success(f"✅ Test data loaded: {len(test_data)} samples")
+        st.sidebar.success(f"Test data loaded: {len(test_data)} samples")
     except Exception as e:
-        st.sidebar.error(f"❌ Test data load failed: {e}")
+        st.sidebar.error(f"Test data load failed: {e}")
 else:
-    st.sidebar.warning("⚠️ No test data found - using stored metrics")
+    st.sidebar.warning("No test data found - using stored metrics")
 
 
 # Add this function to calculate real-time metrics
@@ -26,11 +26,7 @@ def calculate_live_metrics(model, X_test, y_test, target_idx):
     """
     Calculate real-time recall and accuracy for a specific target
     
-    Args:
-        model: trained pipeline
-        X_test: test features
-        y_test: test labels (can be 1D or 2D array)
-        target_idx: 0 for depression, 1 for anxiety
+    Args: session, 1 for anxiety
     
     Returns:
         dict with recall and accuracy
