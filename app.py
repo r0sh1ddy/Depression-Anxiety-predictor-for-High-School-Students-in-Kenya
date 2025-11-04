@@ -405,7 +405,7 @@ else:
         live_recall_anx = recall_score(y_true_sim_anx, y_pred_sim_anx, zero_division=0)
         live_acc_anx = accuracy_score(y_true_sim_anx, y_pred_sim_anx)
 
-    st.markdown("---")
+        st.markdown("---")
     st.markdown("## Screening Results")
 
     c1, c2 = st.columns(2)
@@ -426,7 +426,10 @@ else:
             <div class="score-label">{dep_cat}</div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown(f"**Model Prediction:** `{dep_pred}` (Prob: {dep_proba:.1%})")
+        if dep_proba is not None:
+            st.markdown(f"**Model Prediction:** `{dep_pred}` (Confidence: **{dep_proba:.1%}**)")
+        else:
+            st.markdown(f"**Model Prediction:** `{dep_pred}`")
 
     with col2:
         st.markdown(f"""
@@ -436,7 +439,10 @@ else:
             <div class="score-label">{anx_cat}</div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown(f"**Model Prediction:** `{anx_pred}` (Prob: {anx_proba:.1%})")
+        if anx_proba is not None:
+            st.markdown(f"**Model Prediction:** `{anx_pred}` (Confidence: **{anx_proba:.1%}**)")
+        else:
+            st.markdown(f"**Model Prediction:** `{anx_pred}`")
 
     # SHAP (Fixed)
     st.markdown("---")
