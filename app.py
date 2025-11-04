@@ -4,6 +4,7 @@ import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
+<<<<<<< HEAD
 BASE = os.path.dirname(__file__)
 TEST_DATA_FILE = os.path.join(BASE, "test_data.csv") 
 
@@ -66,6 +67,13 @@ def calculate_live_metrics(model, X_test, y_test, target_idx):
 #  Page config 
 icon_path = "app_images/icon.jpg"
 logo_path = "app_images/icon.jpg"
+=======
+# ----------------------------------------------------------------------
+#  Page config & CSS
+# ----------------------------------------------------------------------
+icon_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
+logo_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
+>>>>>>> 4defad7ddc4a32a6aea0ffe720389cf78bbe0abb
 
 st.set_page_config(
     page_title="AdolescentMind",
