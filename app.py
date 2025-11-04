@@ -539,93 +539,120 @@ else:
     st.markdown("### Model Explanations")
     tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
 
+       # ----------------------------------------------------------------------
+    # SHAP Explanations (Simplified for Non-Technical Users)
+    # ----------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("### Model Explanations")
+    tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
+
     def generate_shap_plot(pipe, user_df, target_idx, title):
-    try:
-        pre = pipe.named_steps['preprocessor']
-        clf = pipe.named_steps['clf']
-        X = pre.transform(user_df)
-        if hasattr(X, "toarray"):
-            X = X.toarray()
+        try:
+            pre = pipe.named_steps['preprocessor']
+            clf = pipe.named_steps['clf']
+            X = pre.transform(user_df)
+            if hasattr(X, "toarray"):
+                X = X.toarray()
 
-        # Friendly feature names
-        feature_names = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [f"f{i}" for i in range(X.shape[1])]
-        friendly_names = {
-            "Parents_Dead": "Number of Parents Deceased",
-            "Parents_Home": "Parents at Home",
-            "Percieved_Academic_Abilities": "Self-Rated Academic Ability",
-            "Co_Curricular": "Participates in Co-curricular",
-            "Sports": "Participates in Sports",
-            "Gender_1": "Male",
-            "Gender_2": "Female",
-            "Age": "Age",
-            "Form": "Form Level",
-            # Add more readable mappings if needed
-        }
-        feature_names = [friendly_names.get(f, f.replace("_", " ")) for f in feature_names]
+            # Friendly feature names
+            feature_names = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [
+                f"f{i}" for i in range(X.shape[1])
+            ]
+            friendly_names = {
+                "Parents_Dead": "Number of Parents Deceased",
+                "Parents_Home": "Parents at Home",
+                "Percieved_Academic_Abilities": "Self-Rated Academic Ability",
+                "Co_Curricular": "Participates in Co-curricular",
+                "Sports": "Participates in Sports",
+                "Gender_1": "Male",
+                "Gender_2": "Female",
+                "Age": "Age",
+                "Form": "Form Level",
+            }
+            feature_names = [friendly_names.get(f, f.replace("_", " ")) for f in feature_names]
 
-        # Compute SHAP values
-        base = clf.estimators_[target_idx] if hasattr(clf, "estimators_") else clf
-        explainer = shap.TreeExplainer(base) if hasattr(base, "predict_proba") else shap.LinearExplainer(base, X)
-        shap_values = explainer.shap_values(X)
+            # Compute SHAP values
+            base = clf.estimators_[target_idx] if hasattr(clf, "estimators_") else clf
+            explainer = shap.TreeExplainer(base) if hasattr(base, "predict_proba") else shap.LinearExplainer(base, X)
+            shap_values = explainer.shap_values(X)
 
-        # Handle multioutput
-        if isinstance(shap_values, list):
-            shap_values = shap_values[target_idx] if len(shap_values) > 1 else shap_values[0]
+            # Handle multioutput
+            if isinstance(shap_values, list):
+                shap_values = shap_values[target_idx] if len(shap_values) > 1 else shap_values[0]
 
-        shap_df = pd.DataFrame({
-            "Feature": feature_names,
-            "Impact": shap_values[0]  # single sample
-        })
-        shap_df["Direction"] = shap_df["Impact"].apply(lambda x: "Increased Risk" if x > 0 else "Reduced Risk")
-        shap_df["AbsImpact"] = shap_df["Impact"].abs()
+            shap_df = pd.DataFrame({
+                "Feature": feature_names,
+                "Impact": shap_values[0]  # single sample
+            })
+            shap_df["Direction"] = shap_df["Impact"].apply(
+                lambda x: "Increased Risk" if x > 0 else "Reduced Risk"
+            )
+            shap_df["AbsImpact"] = shap_df["Impact"].abs()
 
-        # Top features
-        top_features = shap_df.sort_values("AbsImpact", ascending=False).head(10)
+            # Top features
+            top_features = shap_df.sort_values("AbsImpact", ascending=False).head(10)
+            top_features = top_features.sort_values("Impact", ascending=True)  # negatives (green) on top
 
-        # Split by sign
-        top_features = top_features.sort_values("Impact", ascending=True)  # negatives (green) on top
+            # Plot
+            fig, ax = plt.subplots(figsize=(10, 6))
+            colors = top_features["Impact"].apply(lambda x: "#e74c3c" if x > 0 else "#2ecc71")
+            bars = ax.barh(top_features["Feature"], top_features["Impact"], color=colors)
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        colors = top_features["Impact"].apply(lambda x: "#e74c3c" if x > 0 else "#2ecc71")
-        bars = ax.barh(top_features["Feature"], top_features["Impact"], color=colors)
+            ax.set_title(f"Key Factors Influencing {title}", fontweight="bold")
+            ax.set_xlabel("Influence on Prediction (← reduces | increases →)")
+            ax.axvline(0, color="gray", linewidth=1)
+            ax.grid(axis="x", linestyle="--", alpha=0.5)
 
-        ax.set_title(f"Key Factors Influencing {title}", fontweight="bold")
-        ax.set_xlabel("Influence on Prediction (← reduces | increases →)")
-        ax.axvline(0, color="gray", linewidth=1)
-        ax.grid(axis="x", linestyle="--", alpha=0.5)
+            for bar, val in zip(bars, top_features["Impact"]):
+                ax.text(
+                    val + (0.02 if val > 0 else -0.02),
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{val:+.3f}",
+                    va="center",
+                    ha="left" if val > 0 else "right",
+                    color="black",
+                    fontsize=9,
+                )
 
-        for bar, val in zip(bars, top_features["Impact"]):
-            ax.text(val + (0.02 if val > 0 else -0.02), bar.get_y() + bar.get_height()/2,
-                    f"{val:+.3f}", va="center", ha="left" if val > 0 else "right", color="black", fontsize=9)
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
 
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+            st.caption("""
+            **How to interpret:**
+            - 🔴 Features on the right **increase** the predicted risk.
+            - 🟢 Features on the left **reduce** the predicted risk.
+            - Bar length = strength of influence on this prediction.
+            """)
+            return True
 
-        st.caption("""
-        **How to interpret:**
-        - 🔴 Features on the right **increase** the predicted risk.
-        - 🟢 Features on the left **reduce** the predicted risk.
-        - Bar length = strength of influence on this prediction.
-        """)
-        return True
-
-    except Exception as e:
-        st.warning(f"Unable to generate simplified SHAP: {e}")
-        return False
+        except Exception as e:
+            st.warning(f"Unable to generate simplified SHAP: {e}")
+            return False
 
     with tab_d:
         if best_dep_model and pipelines.get(best_dep_model):
-            generate_shap_plot(pipelines[best_dep_model], user_df, target_idx=0, title="Top Depression Risk Factors")
+            generate_shap_plot(
+                pipelines[best_dep_model],
+                user_df,
+                target_idx=0,
+                title="Depression Prediction"
+            )
         else:
             st.info("No model available.")
 
     with tab_a:
         if best_anx_model and pipelines.get(best_anx_model):
             idx = 0 if best_dep_model != best_anx_model else 1
-            generate_shap_plot(pipelines[best_anx_model], user_df, target_idx=idx, title="Top Anxiety Risk Factors")
+            generate_shap_plot(
+                pipelines[best_anx_model],
+                user_df,
+                target_idx=idx,
+                title="Anxiety Prediction"
+            )
         else:
             st.info("No model available.")
+
 
     # Crisis Alert details (unchanged contact info)
     if phq_total >= 15 or gad_total >= 15:
