@@ -450,10 +450,145 @@ with tab2:
                                                format_func=lambda x: likert[x],
                                                label_visibility="collapsed")
         st.markdown("---")
+        
+        # --- Combined Risk Assessment Summary ---
+        st.markdown("## 📋 Overall Risk Assessment")
+        
+        # Determine overall risk level
+        dep_clinical_risk = "High" if phq_total >= 15 else "Moderate" if phq_total >= 10 else "Low"
+        anx_clinical_risk = "High" if gad_total >= 15 else "Moderate" if gad_total >= 10 else "Low"
+        dep_model_risk = "At Risk" if dep_pred == 1 else "Not At Risk"
+        anx_model_risk = "At Risk" if anx_pred == 1 else "Not At Risk"
+        
+        col_summary1, col_summary2, col_summary3 = st.columns(3)
+        
+        with col_summary1:
+            st.markdown("### 🎯 Depression Summary")
+            st.markdown(f"""
+            - **Clinical Risk:** {dep_clinical_risk}
+            - **AI Assessment:** {dep_model_risk}
+            - **Score:** {phq_total}/24
+            - **Severity:** {dep_cat}
+            """)
+            
+        with col_summary2:
+            st.markdown("### 🎯 Anxiety Summary")
+            st.markdown(f"""
+            - **Clinical Risk:** {anx_clinical_risk}
+            - **AI Assessment:** {anx_model_risk}
+            - **Score:** {gad_total}/21
+            - **Severity:** {anx_cat}
+            """)
+        
+        with col_summary3:
+            st.markdown("### 🎯 Action Required")
+            
+            # Determine highest priority action
+            max_score = max(phq_total, (gad_total * 24/21))  # Normalize GAD to PHQ scale
+            
+            if max_score >= 15 or (dep_pred == 1 and anx_pred == 1):
+                st.error("🚨 **Immediate Action**")
+                st.markdown("Seek professional mental health support **soon**")
+            elif max_score >= 10 or dep_pred == 1 or anx_pred == 1:
+                st.warning("⚠️ **Professional Consultation**")
+                st.markdown("Schedule appointment with counselor")
+            elif max_score >= 5:
+                st.info("ℹ️ **Monitor & Self-Care**")
+                st.markdown("Practice wellness strategies, monitor symptoms")
+            else:
+                st.success("✅ **Continue Healthy Habits**")
+                st.markdown("Maintain current mental health practices")
+        
+        # Detailed action plan
+        st.markdown("---")
+        st.markdown("## 🗓️ Recommended Action Plan")
+        
+        action_col1, action_col2 = st.columns(2)
+        
+        with action_col1:
+            st.markdown("### Immediate Steps (This Week)")
+            
+            immediate_actions = []
+            
+            if phq_total >= 15 or gad_total >= 15:
+                immediate_actions.extend([
+                    "📞 Contact school counselor or mental health professional",
+                    "🗣️ Talk to trusted adult about how you're feeling",
+                    "📝 Keep crisis hotline numbers readily available"
+                ])
+            elif phq_total >= 10 or gad_total >= 10:
+                immediate_actions.extend([
+                    "📅 Schedule appointment with school counselor",
+                    "💬 Discuss feelings with trusted friend or family member",
+                    "📖 Learn about depression/anxiety resources"
+                ])
+            elif phq_total >= 5 or gad_total >= 5:
+                immediate_actions.extend([
+                    "🧘 Start daily relaxation or mindfulness practice",
+                    "📊 Monitor your mood and symptoms",
+                    "🤝 Reach out to social support network"
+                ])
+            else:
+                immediate_actions.extend([
+                    "✅ Continue current healthy habits",
+                    "💪 Maintain regular exercise routine",
+                    "😴 Keep consistent sleep schedule"
+                ])
+            
+            for action in immediate_actions:
+                st.markdown(f"- {action}")
+        
+        with action_col2:
+            st.markdown("### Ongoing Strategies")
+            
+            ongoing_actions = [
+                "🏃 Regular physical activity (30 min/day)",
+                "😴 Maintain sleep hygiene (7-9 hours)",
+                "🥗 Balanced nutrition and hydration",
+                "📱 Limit social media if it causes stress",
+                "🎨 Engage in enjoyable activities",
+                "📚 Academic stress management",
+                "👥 Maintain social connections"
+            ]
+            
+            for action in ongoing_actions:
+                st.markdown(f"- {action}")
+
+        st.markdown("---")
 
         # --- Real-time Performance Metrics Explanation ---
-        with st.expander("📊 Understanding Model Performance", expanded=False):
+        with st.expander("📊 Understanding Model Performance & Your Results", expanded=False):
             st.markdown("""
+            ### How to Read Your Results
+            
+            Your screening provides **three types of information**:
+            
+            1️⃣ **Clinical Score (PHQ-8 / GAD-7)**
+            - Based on validated medical questionnaires
+            - Uses standard cutoff scores
+            - Most reliable for interpretation
+            
+            2️⃣ **AI Model Prediction**
+            - Machine learning analysis of your responses
+            - Considers patterns across all your answers
+            - May catch risk not obvious from score alone
+            
+            3️⃣ **Confidence Metrics**
+            - How certain the AI model is about its prediction
+            - Higher confidence = more reliable prediction
+            
+            ### What If Results Don't Match?
+            
+            **Score says "At Risk" but Model says "Not At Risk":**
+            - Trust the clinical score more
+            - The validated questionnaire is the gold standard
+            - Seek professional evaluation
+            
+            **Model says "At Risk" but Score is low:**
+            - AI detected subtle patterns in your responses
+            - Worth discussing with a counselor
+            - Your specific combination of symptoms may indicate risk
+            
             ### Metrics Explanation
             
             **Stored Test Set Metrics:**
@@ -473,24 +608,42 @@ with tab2:
             """)
             
             if dep_confidence is not None or anx_confidence is not None:
-                st.markdown("### Current Prediction Summary")
+                st.markdown("### Your Current Prediction Summary")
                 col_m1, col_m2 = st.columns(2)
                 
                 with col_m1:
                     if dep_confidence is not None:
                         st.markdown("**Depression:**")
-                        st.markdown(f"- Prediction: `{dep_pred}` ({'At Risk' if dep_pred == 1 else 'Not At Risk'})")
-                        st.markdown(f"- Confidence: `{dep_confidence:.1%}`")
-                        st.markdown(f"- Probability: `{dep_proba_class_1:.1%}`")
+                        st.markdown(f"- Clinical Score: `{phq_total}/24` ({dep_cat})")
+                        st.markdown(f"- AI Prediction: `{dep_pred}` ({'At Risk' if dep_pred == 1 else 'Not At Risk'})")
+                        st.markdown(f"- AI Confidence: `{dep_confidence:.1%}`")
+                        st.markdown(f"- Risk Probability: `{dep_proba_class_1:.1%}`")
                         st.markdown(f"- Model Test Recall: `{dep_rec_stored:.1%}`")
+                        
+                        # Agreement indicator
+                        clinical_risk = phq_total >= 10
+                        model_risk = dep_pred == 1
+                        if clinical_risk == model_risk:
+                            st.success("✅ Clinical score and AI model agree")
+                        else:
+                            st.warning("⚠️ Clinical score and AI model disagree - see interpretation guide above")
                 
                 with col_m2:
                     if anx_confidence is not None:
                         st.markdown("**Anxiety:**")
-                        st.markdown(f"- Prediction: `{anx_pred}` ({'At Risk' if anx_pred == 1 else 'Not At Risk'})")
-                        st.markdown(f"- Confidence: `{anx_confidence:.1%}`")
-                        st.markdown(f"- Probability: `{anx_proba_class_1:.1%}`")
+                        st.markdown(f"- Clinical Score: `{gad_total}/21` ({anx_cat})")
+                        st.markdown(f"- AI Prediction: `{anx_pred}` ({'At Risk' if anx_pred == 1 else 'Not At Risk'})")
+                        st.markdown(f"- AI Confidence: `{anx_confidence:.1%}`")
+                        st.markdown(f"- Risk Probability: `{anx_proba_class_1:.1%}`")
                         st.markdown(f"- Model Test Recall: `{anx_rec_stored:.1%}`")
+                        
+                        # Agreement indicator
+                        clinical_risk = gad_total >= 10
+                        model_risk = anx_pred == 1
+                        if clinical_risk == model_risk:
+                            st.success("✅ Clinical score and AI model agree")
+                        else:
+                            st.warning("⚠️ Clinical score and AI model disagree - see interpretation guide above")
 
         st.markdown("---")
     phq_total = sum(phq.values())
@@ -723,21 +876,91 @@ if submitted:
                     )
         st.markdown("---")
 
-        col1, col2 = st.columns(2)
+                col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"""
             <div class="score-card {card_class}" style="{card_style} border-left:5px solid #1f77b4">
                 <div class="score-card-content">
-                    <h3 style="margin:0;">PHQ-8</h3>
+                    <h3 style="margin:0;">PHQ-8 Depression Assessment</h3>
                     <div class="score-number">{phq_total}<span style="font-size:2rem;opacity:0.7">/24</span></div>
                     <div class="score-label">{dep_cat}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Severity interpretation
+            if phq_total < 5:
+                st.info("✅ **Minimal Depression**: Symptoms are minimal. Continue healthy habits.")
+            elif phq_total < 10:
+                st.warning("⚠️ **Mild Depression**: Watchful waiting. Consider support if worsens.")
+            elif phq_total < 15:
+                st.warning("⚠️ **Moderate Depression**: Treatment should be considered (counseling, medication).")
+            elif phq_total < 20:
+                st.error("🚨 **Moderately Severe**: Active treatment with counseling and/or medication recommended.")
+            else:
+                st.error("🚨 **Severe Depression**: Immediate treatment strongly recommended. Seek professional help urgently.")
+            
+            # Model prediction details
             if best_dep_model:
-                st.markdown(f"**Model Prediction:** `{dep_pred}`")
+                pred_label = "⚠️ At Risk" if dep_pred == 1 else "✅ Not At Risk"
+                st.markdown(f"**Model Prediction:** {pred_label}")
+                
                 if dep_confidence is not None:
                     st.progress(dep_confidence)
                     st.caption(f"Prediction confidence: {dep_confidence:.1%}")
                 if dep_proba_class_1 is not None:
                     st.caption(f"Probability of Depression: {dep_proba_class_1:.1%}")
+                
+                # Interpretation guidance
+                with st.expander("📖 Understanding Your Depression Results"):
+                    st.markdown(f"""
+                    ### Score Breakdown
+                    - **Your Score:** {phq_total}/24
+                    - **Severity Level:** {dep_cat}
+                    - **Model Says:** {pred_label}
+                    
+                    ### What This Means
+                    The PHQ-8 measures depression symptoms over the past 2 weeks. Each question is scored 0-3:
+                    - **0-4:** Minimal symptoms
+                    - **5-9:** Mild symptoms
+                    - **10-14:** Moderate symptoms
+                    - **15-19:** Moderately severe symptoms
+                    - **20-24:** Severe symptoms
+                    
+                    ### Your Highest Scoring Items
+                    """)
+                    
+                    # Show top 3 PHQ symptoms
+                    phq_items = {
+                        'PHQ_1': 'Little interest or pleasure',
+                        'PHQ_2': 'Feeling down/depressed',
+                        'PHQ_3': 'Sleep problems',
+                        'PHQ_4': 'Feeling tired/low energy',
+                        'PHQ_5': 'Appetite issues',
+                        'PHQ_6': 'Feeling bad about self',
+                        'PHQ_7': 'Trouble concentrating',
+                        'PHQ_8': 'Moving/speaking slowly or fidgety'
+                    }
+                    
+                    sorted_phq = sorted(phq.items(), key=lambda x: x[1], reverse=True)[:3]
+                    for item, score in sorted_phq:
+                        if score > 0:
+                            st.markdown(f"- **{phq_items.get(item, item)}**: {likert[score]} ({score}/3)")
+                    
+                    st.markdown("""
+                    ### Next Steps
+                    """)
+                    
+                    if phq_total < 5:
+                        st.success("Continue monitoring your mental health. Maintain healthy sleep, exercise, and social connections.")
+                    elif phq_total < 10:
+                        st.info("Consider talking to a trusted friend, family member, or school counselor about how you're feeling.")
+                    elif phq_total < 15:
+                        st.warning("Schedule an appointment with a mental health professional or school counselor for evaluation.")
+                    else:
+                        st.error("Seek professional help soon. Contact a mental health professional or use crisis resources if needed.")
+                    
+                    if dep_pred == 1 and phq_total < 10:
+                        st.info("💡 **Note:** The AI model predicts risk even though your score is in the mild range. This may be due to your specific response pattern. Consider professional evaluation.")
+                    elif dep_pred == 0 and phq_total >= 10:
+                        st.warning("💡 **Note:** Your score suggests moderate symptoms, though the AI model prediction is lower risk. The score-based interpretation is more reliable. Seek professional guidance.")
