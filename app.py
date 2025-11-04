@@ -1087,11 +1087,11 @@ st.download_button("⬇️ Download Combined Results Report",
                    mime="text/plain")
 
 
-        # --- Disclaimer ---
-        st.markdown("---")
-        st.warning("""
-        **SCREENING ONLY**  
-        This tool uses PHQ-8 and GAD-7 for screening.  
-        Results are **not a diagnosis**.  
-        High scores indicate need for professional evaluation.
-        """)
+# --- Disclaimer ---
+st.markdown("---")
+st.warning("""
+**SCREENING ONLY**  
+This tool uses PHQ-8 and GAD-7 for screening.  
+Results are **not a diagnosis**.  
+High scores indicate need for professional evaluation.
+""")
