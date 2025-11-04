@@ -364,11 +364,19 @@ else:
         for name, pipe in pipelines.items():
             try:
                 pred = pipe.predict(user_df)[0]
-                proba = pipe.predict_proba(user_df)[0]
+                # Safely get probabilities
+                try:
+                    proba = pipe.predict_proba(user_df)[0]
+                    dep_prob = proba[0][1] if len(proba) > 0 and len(proba[0]) > 1 else None
+                    anx_prob = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
+                except:
+                    dep_prob = None
+                    anx_prob = None
+
                 all_preds[name] = {'dep': pred[0], 'anx': pred[1] if len(pred) > 1 else None}
-                all_probas[name] = {'dep': proba[0][1] if len(proba) > 0 else None,
-                                    'anx': proba[1][1] if len(proba) > 1 else None}
-            except:
+                all_probas[name] = {'dep': dep_prob, 'anx': anx_prob}
+            except Exception as e:
+                st.warning(f"Model {name} failed: {e}")
                 all_preds[name] = {'dep': None, 'anx': None}
                 all_probas[name] = {'dep': None, 'anx': None}
 
@@ -390,22 +398,25 @@ else:
         anx_proba = all_probas.get(best_anx_model, {}).get('anx')
 
         # Severity
-        dep_cat = "Minimal" if st.session_state.phq_total < 5 else "Mild" if st.session_state.phq_total < 10 else "Moderate" if st.session_state.phq_total < 15 else "Moderately Severe" if st.session_state.phq_total < 20 else "Severe"
-        anx_cat = "Minimal" if st.session_state.gad_total < 5 else "Mild" if st.session_state.gad_total < 10 else "Moderate" if st.session_state.gad_total < 15 else "Severe"
+        phq_total = st.session_state.phq_total
+        gad_total = st.session_state.gad_total
+        dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
+        anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
 
-        # Real-time metrics (simulate with threshold)
+        # Live Metrics (Safe)
         threshold = 0.5
-        y_true_sim = [1 if st.session_state.phq_total >= 10 else 0]  # PHQ-8 proxy
-        y_pred_sim = [1 if dep_proba >= threshold else 0] if dep_proba else [0]
-        live_recall_dep = recall_score(y_true_sim, y_pred_sim, zero_division=0)
-        live_acc_dep = accuracy_score(y_true_sim, y_pred_sim)
+        y_true_dep = [1 if phq_total >= 10 else 0]
+        y_true_anx = [1 if gad_total >= 10 else 0]
 
-        y_true_sim_anx = [1 if st.session_state.gad_total >= 10 else 0]
-        y_pred_sim_anx = [1 if anx_proba >= threshold else 0] if anx_proba else [0]
-        live_recall_anx = recall_score(y_true_sim_anx, y_pred_sim_anx, zero_division=0)
-        live_acc_anx = accuracy_score(y_true_sim_anx, y_pred_sim_anx)
+        dep_pred_live = 1 if (dep_proba is not None and dep_proba >= threshold) else 0
+        anx_pred_live = 1 if (anx_proba is not None and anx_proba >= threshold) else 0
 
-        st.markdown("---")
+        live_recall_dep = recall_score(y_true_dep, [dep_pred_live], zero_division=0)
+        live_acc_dep = accuracy_score(y_true_dep, [dep_pred_live])
+        live_recall_anx = recall_score(y_true_anx, [anx_pred_live], zero_division=0)
+        live_acc_anx = accuracy_score(y_true_anx, [anx_pred_live])
+
+    st.markdown("---")
     st.markdown("## Screening Results")
 
     c1, c2 = st.columns(2)
@@ -422,29 +433,29 @@ else:
         st.markdown(f"""
         <div class="score-card" style="border-left:5px solid #1f77b4">
             <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
-            <div class="score-number">{st.session_state.phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+            <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
             <div class="score-label">{dep_cat}</div>
         </div>
         """, unsafe_allow_html=True)
+        pred_text = f"**Model Prediction:** `{dep_pred}`"
         if dep_proba is not None:
-            st.markdown(f"**Model Prediction:** `{dep_pred}` (Confidence: **{dep_proba:.1%}**)")
-        else:
-            st.markdown(f"**Model Prediction:** `{dep_pred}`")
+            pred_text += f" (Confidence: **{dep_proba:.1%}**)"
+        st.markdown(pred_text)
 
     with col2:
         st.markdown(f"""
         <div class="score-card" style="border-left:5px solid #ff7f0e">
             <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
-            <div class="score-number">{st.session_state.gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+            <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
             <div class="score-label">{anx_cat}</div>
         </div>
         """, unsafe_allow_html=True)
+        pred_text = f"**Model Prediction:** `{anx_pred}`"
         if anx_proba is not None:
-            st.markdown(f"**Model Prediction:** `{anx_pred}` (Confidence: **{anx_proba:.1%}**)")
-        else:
-            st.markdown(f"**Model Prediction:** `{anx_pred}`")
+            pred_text += f" (Confidence: **{anx_proba:.1%}**)"
+        st.markdown(pred_text)
 
-    # SHAP (Fixed)
+    # SHAP (Safe)
     st.markdown("---")
     st.markdown("### Model Explanations")
     tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
@@ -474,7 +485,7 @@ else:
 
             mean_abs = np.abs(sv).mean(axis=0) if sv.ndim > 1 else np.abs(sv)
             top_i = np.argsort(mean_abs)[-10:][::-1]
-            top_i = [i for i in top_i if i < len(feat)]  # Safety
+            top_i = [i for i in top_i if i < len(feat)]
             top_f = [feat[i] for i in top_i]
             top_v = mean_abs[top_i]
 
@@ -495,7 +506,7 @@ else:
             st.caption("Longer bars = greater influence on model output.")
             return True
         except Exception as e:
-            st.warning(f"SHAP explanation failed: {str(e)[:100]}...")
+            st.warning(f"SHAP failed: {str(e)[:100]}...")
             return False
 
     with tab_d:
@@ -512,7 +523,7 @@ else:
             st.info("No model available.")
 
     # Crisis Alert
-    if st.session_state.phq_total >= 15 or st.session_state.gad_total >= 15:
+    if phq_total >= 15 or gad_total >= 15:
         st.markdown("---")
         st.error("### High Score Detected")
         st.markdown("""
@@ -522,17 +533,20 @@ else:
         - **School Counselor**
         """)
 
-    # Download Report
+    # Download Report (SAFE)
     st.markdown("---")
+    dep_conf = f" (Conf: {dep_proba:.1%})" if dep_proba is not None else ""
+    anx_conf = f" (Conf: {anx_proba:.1%})" if anx_proba is not None else ""
+
     report = f"""
 SCREENING RESULTS
 Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
 
-PHQ-8 Score: {st.session_state.phq_total}/24 → {dep_cat}
-GAD-7 Score: {st.session_state.gad_total}/21 → {anx_cat}
+PHQ-8 Score: {phq_total}/24 → {dep_cat}
+GAD-7 Score: {gad_total}/21 → {anx_cat}
 
-Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred} (Prob: {dep_proba:.1%})
-Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred} (Prob: {anx_proba:.1%})
+Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred}{dep_conf}
+Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred}{anx_conf}
 
 Live Metrics:
   Depression → Recall: {live_recall_dep:.1%}, Accuracy: {live_acc_dep:.1%}
