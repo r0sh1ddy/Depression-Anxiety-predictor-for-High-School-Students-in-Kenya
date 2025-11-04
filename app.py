@@ -3,21 +3,9 @@ import pandas as pd
 import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from sklearn.metrics import recall_score, accuracy_score
-
-
-def update_live_phq():
-    total = sum(st.session_state.get(f"phq_live_{i}", 0) for i in range(1, 9))
-    st.session_state.live_phq_total = total
-
-
-def update_live_gad():
-    total = sum(st.session_state.get(f"gad_live_{i}", 0) for i in range(1, 8))
-    st.session_state.live_gad_total = total
-
 
 # ----------------------------------------------------------------------
-# Page config & Session State Initialization
+#  Page config & CSS
 # ----------------------------------------------------------------------
 icon_path = "app_images/icon.jpg"
 logo_path = "app_images/icon.jpg"
@@ -29,11 +17,6 @@ st.set_page_config(
     page_icon=icon_path if os.path.exists(icon_path) else "brain"
 )
 
-# Initialize session state
-if 'live_phq_total' not in st.session_state:
-    st.session_state.live_phq_total = 0
-if 'live_gad_total' not in st.session_state:
-    st.session_state.live_gad_total = 0
 if 'submitted' not in st.session_state:
     st.session_state.submitted = False
 if 'background_style' not in st.session_state:
@@ -250,50 +233,23 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-# ----------------------------------------------------------------------
-# Load Models & Metrics
-# ----------------------------------------------------------------------
+#  Load models
 PIPELINE_FILE = os.path.join(BASE, "trained_pipelines.pkl")
 METRICS_FILE  = os.path.join(BASE, "model_metrics.pkl")
 
 pipelines = {}
 model_metrics = {}
 
-# Load pipelines
 if os.path.exists(PIPELINE_FILE):
-    try:
-        with open(PIPELINE_FILE, "rb") as f:
-            loaded = pickle.load(f)
-            if isinstance(loaded, dict):
-                pipelines = loaded
-                st.success(f"Loaded {len(pipelines)} model(s).")
-            else:
-                st.error("Pipelines file is corrupted or invalid.")
-    except Exception as e:
-        st.error(f"Failed to load models: {str(e)[:100]}...")
-else:
-    st.warning("No trained models found. Place `trained_pipelines.pkl` in project folder.")
+    with open(PIPELINE_FILE, "rb") as f:
+        pipelines = pickle.load(f)
 
-# Load metrics
 if os.path.exists(METRICS_FILE):
-    try:
-        with open(METRICS_FILE, "rb") as f:
-            loaded = pickle.load(f)
-            if isinstance(loaded, dict):
-                model_metrics = loaded
-                st.caption(f"Model performance metrics loaded.")
-            else:
-                st.error("Metrics file is corrupted.")
-    except Exception as e:
-        st.error(f"Failed to load metrics: {str(e)[:100]}...")
-else:
-    st.info("No model metrics found. Performance charts will be unavailable.")
+    with open(METRICS_FILE, "rb") as f:
+        model_metrics = pickle.load(f)
 
 
-# ----------------------------------------------------------------------
-# Sidebar
-# ----------------------------------------------------------------------
+#  Sidebar
 with st.sidebar:
     st.title("Settings")
 
@@ -368,591 +324,369 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 3. Model Selection Mode
-    st.markdown("### Model Selection")
-    selection_mode = st.radio(
-        "Choose Mode:",
-        ["Auto-Select Best", "Manual Selection", "View All Models"],
-        horizontal=True,
-        key="selection_mode"
-    )
+    if model_metrics:
+        st.markdown("### Best Models by Recall")
+        best_dep_recall = -1
+        best_dep_model_info = None
+        for name, m in model_metrics.items():
+            r = m.get('test_recall_per_target', {}).get('Is_Depressed', 0)
+            if r > best_dep_recall:
+                best_dep_recall = r
+                best_dep_model_info = (name, m)
 
-    if selection_mode == "Manual Selection" and pipelines:
-        st.markdown("#### Select Models")
-        default_dep = st.session_state.get("manual_dep_model", list(pipelines.keys())[0])
-        default_anx = st.session_state.get("manual_anx_model", list(pipelines.keys())[0])
+        best_anx_recall = -1
+        best_anx_model_info = None
+        for name, m in model_metrics.items():
+            r = m.get('test_recall_per_target', {}).get('Has_anxiety', 0)
+            if r > best_anx_recall:
+                best_anx_recall = r
+                best_anx_model_info = (name, m)
 
-        manual_dep_model = st.selectbox(
-            "Depression Model:",
-            options=list(pipelines.keys()),
-            index=list(pipelines.keys()).index(default_dep),
-            key="manual_dep"
-        )
-        manual_anx_model = st.selectbox(
-            "Anxiety Model:",
-            options=list(pipelines.keys()),
-            index=list(pipelines.keys()).index(default_anx),
-            key="manual_anx"
-        )
-        st.session_state.manual_dep_model = manual_dep_model
-        st.session_state.manual_anx_model = manual_anx_model
-
-    st.markdown("---")
-
-    # 4. Best Models by Recall (pre-computed)
-    if model_metrics and pipelines:
-        st.markdown("### Top Models by Recall")
-
-        def get_best_model(target):
-            best_score = -1
-            best_name = None
-            for name, m in model_metrics.items():
-                r = m.get('test_recall_per_target', {}).get(target, 0)
-                if r > best_score:
-                    best_score = r
-                    best_name = name
-            return best_name, best_score
-
-        # Depression
-        dep_name, dep_recall = get_best_model('Is_Depressed')
-        if dep_name:
-            acc = model_metrics[dep_name].get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+        if best_dep_model_info:
+            n, m = best_dep_model_info
+            st.markdown(f"#### Depression")
             st.markdown(f"""
             <div class="best-model-card">
-                <div style="font-size:0.9rem;opacity:0.9;">Depression</div>
-                <div style="font-size:1.1rem;font-weight:bold;">{dep_name}</div>
-                <div style="display:flex;justify-content:space-around;margin-top:0.5rem;">
-                    <div><small>Recall</small><br><b>{dep_recall:.1%}</b></div>
-                    <div><small>Accuracy</small><br><b>{acc:.1%}</b></div>
+                <div style="font-size:0.9rem;margin-bottom:0.5rem;">Selected Model</div>
+                <div style="font-size:1.2rem;font-weight:bold;margin-bottom:0.5rem;">{n}</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Recall</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_recall_per_target']['Is_Depressed']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Accuracy</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_accuracy_per_target']['Is_Depressed']:.1%}</div></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        # Anxiety
-        anx_name, anx_recall = get_best_model('Has_anxiety')
-        if anx_name:
-            acc = model_metrics[anx_name].get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+        if best_anx_model_info:
+            n, m = best_anx_model_info
+            st.markdown(f"#### Anxiety")
             st.markdown(f"""
             <div class="best-model-card">
-                <div style="font-size:0.9rem;opacity:0.9;">Anxiety</div>
-                <div style="font-size:1.1rem;font-weight:bold;">{anx_name}</div>
-                <div style="display:flex;justify-content:space-around;margin-top:0.5rem;">
-                    <div><small>Recall</small><br><b>{anx_recall:.1%}</b></div>
-                    <div><small>Accuracy</small><br><b>{acc:.1%}</b></div>
+                <div style="font-size:0.9rem;margin-bottom:0.5rem;">Selected Model</div>
+                <div style="font-size:1.2rem;font-weight:bold;margin-bottom:0.5rem;">{n}</div>
+                <div style="display:flex;justify-content:space-around;">
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Recall</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_recall_per_target']['Has_anxiety']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Accuracy</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_accuracy_per_target']['Has_anxiety']:.1%}</div></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
     st.markdown("---")
-
-    # 5. All Models Comparison
-    with st.expander("Compare All Models", expanded=False):
-        if model_metrics and len(model_metrics) > 1:
-            view_metric = st.selectbox(
-                "Metric:",
-                ["Recall", "Accuracy"],
-                key="compare_metric"
-            )
+    with st.expander("All Models Comparison", expanded=False):
+        if model_metrics:
+            view_metric = st.selectbox("Metric:", ["Recall", "Accuracy"], key="metric")
             key = 'test_recall_per_target' if view_metric == "Recall" else 'test_accuracy_per_target'
-
-            names, dep_scores, anx_scores = [], [], []
-            for name, m in model_metrics.items():
-                names.append(name)
-                dep_scores.append(m[key].get('Is_Depressed', 0) * 100)
-                anx_scores.append(m[key].get('Has_anxiety', 0) * 100)
-
-            fig = go.Figure()
-            fig.add_trace(go.Bar(name='Depression', x=names, y=dep_scores,
-                                 marker_color='#1f77b4', text=dep_scores,
-                                 textposition='outside', texttemplate='%{y:.1f}%'))
-            fig.add_trace(go.Bar(name='Anxiety', x=names, y=anx_scores,
-                                 marker_color='#ff7f0e', text=anx_scores,
-                                 textposition='outside', texttemplate='%{y:.1f}%'))
-            fig.update_layout(
-                barmode='group',
-                height=380,
-                title=f"{view_metric} Comparison (%)",
-                yaxis=dict(range=[0, 100], title=f"{view_metric} (%)"),
-                margin=dict(l=40, r=40, t=60, b=40),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Not enough data to compare.")
+            dep, anx, names = [], [], []
+            for n, m in model_metrics.items():
+                if key in m:
+                    names.append(n)
+                    dep.append(m[key].get('Is_Depressed', 0) * 100)
+                    anx.append(m[key].get('Has_anxiety', 0) * 100)
+            if names:
+                fig = go.Figure(data=[
+                    go.Bar(name='Depression', x=names, y=dep, marker_color='#1f77b4'),
+                    go.Bar(name='Anxiety', x=names, y=anx, marker_color='#ff7f0e')
+                ])
+                fig.update_layout(barmode='group', height=300, title=f"{view_metric} (%)",
+                                  yaxis_title=f"{view_metric} (%)", margin=dict(l=20,r=20,t=40,b=20))
+                st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-
-    # 6. Live Agreement with PHQ-8 / GAD-7 (After Submit)
-    if st.session_state.get("submitted", False):
-        st.markdown("### Agreement with PHQ-8 / GAD-7")
-        dep_agree = st.session_state.get("live_agreement_dep", None)
-        anx_agree = st.session_state.get("live_agreement_anx", None)
-
-        if dep_agree is not None:
-            st.caption(f"**Depression**: Model agrees with PHQ-8 (≥10) in **{dep_agree:.0%}** of this case.")
-        if anx_agree is not None:
-            st.caption(f"**Anxiety**: Model agrees with GAD-7 (≥10) in **{anx_agree:.0%}** of this case.")
-        st.caption("*Agreement ≠ true diagnostic accuracy – it only shows consistency with the questionnaire.*")
-
+    st.info("**Recall** measures ability to identify students who may need support.")
 
 # ----------------------------------------------------------------------
-# Restart Button
+#  Form
 # ----------------------------------------------------------------------
-if st.session_state.submitted:
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
+st.markdown("## Complete the Screening")
+
+tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+
+with tab1:
+    st.markdown("### School & Personal Information")
+    col1, col2 = st.columns(2)
+    with col1:
+        boarding_day = st.selectbox("School Type", ["Boarding", "Day"])
+        school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"])
+        school_demo = st.selectbox("Location", ["Urban", "Rural", "Semi-urban"])
+        school_county = st.selectbox("County", ["Nairobi","Kiambu","Kisumu","Mombasa","Nakuru","Other"])
+        age = st.slider("Age", 12, 25, 16)
+        gender = st.selectbox("Gender", ["Male", "Female"])
     with col2:
-        if st.button(
-            "Start New Screening",
-            key="restart",
-            help="Clear current results and start over",
-            use_container_width=True
-        ):
-            # Keep only UI preferences
-            keep_keys = {
-                'background_style',
-                'custom_bg_color',
-                'custom_bg_image',
-                'manual_dep_model',
-                'manual_anx_model'
-            }
-            for key in list(st.session_state.keys()):
-                if key not in keep_keys:
-                    del st.session_state[key]
-            st.session_state.submitted = False
-            st.success("Ready for new screening!")
-            st.rerun()
+        form = st.selectbox("Form", [1,2,3,4])
+        religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"])
+        parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"])
+        parents_dead = st.number_input("Deceased Parents", 0, 4, 0)
+        fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"])
+        mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"])
+    col3, col4, col5 = st.columns(3)
+    with col3: 
+        co_curr = st.selectbox("Co-curricular", ["Yes", "No"])
+    with col4: 
+        sports = st.selectbox("Sports", ["Yes", "No"])
+    with col5: 
+        acad_ability = st.slider("Academic Self-Rating", 1, 5, 3)
 
-
-# ----------------------------------------------------------------------
-# Screening Form – with live colour-changing scores
-# ----------------------------------------------------------------------
-if not st.session_state.submitted:
-    st.markdown("## Complete the Screening")
-    st.markdown("## Live Screening Scores")
-
-    # Helper colour / label functions
-    def get_phq_style(score):
-        if score < 5:
-            return "#27ae60", "Minimal", "rgba(39, 174, 96, 0.1)"
-        elif score < 10:
-            return "#f39c12", "Mild", "rgba(243, 156, 18, 0.1)"
-        elif score < 15:
-            return "#e67e22", "Moderate", "rgba(230, 126, 34, 0.1)"
-        elif score < 20:
-            return "#c0392b", "Moderately Severe", "rgba(192, 57, 43, 0.1)"
-        else:
-            return "#c0392b", "Severe", "rgba(192, 57, 43, 0.15)"
-
-    def get_gad_style(score):
-        if score < 5:
-            return "#27ae60", "Minimal", "rgba(39, 174, 96, 0.1)"
-        elif score < 10:
-            return "#f39c12", "Mild", "rgba(243, 156, 18, 0.1)"
-        elif score < 15:
-            return "#e67e22", "Moderate", "rgba(230, 126, 34, 0.1)"
-        else:
-            return "#c0392b", "Severe", "rgba(192, 57, 43, 0.15)"
-
-    phq_c, phq_l, phq_bg = get_phq_style(st.session_state.live_phq_total)
-    gad_c, gad_l, gad_bg = get_gad_style(st.session_state.live_gad_total)
-
-    col_live1, col_live2 = st.columns(2)
-
-    with col_live1:
-        st.markdown(f"""
-        <div class="score-card" style="
-            border-left:6px solid {phq_c};
-            background:{phq_bg};
-            padding:1.3rem;
-            border-radius:12px;
-            margin:0.8rem 0;
-            box-shadow:0 4px 10px rgba(0,0,0,0.08);
-            transition:all 0.3s ease;
-        ">
-            <h4 style="margin:0;color:{phq_c};font-weight:600;">PHQ-8 (Depression)</h4>
-            <div style="font-size:2.5rem;font-weight:800;color:{phq_c};margin:0.4rem 0;">
-                {st.session_state.live_phq_total}<span style="font-size:1.3rem;color:#666;"> / 24</span>
-            </div>
-            <div style="font-size:1rem;font-weight:600;color:{phq_c};
-                 background:rgba(255,255,255,0.7);display:inline-block;
-                 padding:0.2rem 0.6rem;border-radius:6px;">
-                {phq_l}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_live2:
-        st.markdown(f"""
-        <div class="score-card" style="
-            border-left:6px solid {gad_c};
-            background:{gad_bg};
-            padding:1.3rem;
-            border-radius:12px;
-            margin:0.8rem 0;
-            box-shadow:0 4px 10px rgba(0,0,0,0.08);
-            transition:all 0.3s ease;
-        ">
-            <h4 style="margin:0;color:{gad_c};font-weight:600;">GAD-7 (Anxiety)</h4>
-            <div style="font-size:2.5rem;font-weight:800;color:{gad_c};margin:0.4rem 0;">
-                {st.session_state.live_gad_total}<span style="font-size:1.3rem;color:#666;"> / 21</span>
-            </div>
-            <div style="font-size:1rem;font-weight:600;color:{gad_c};
-                 background:rgba(255,255,255,0.7);display:inline-block;
-                 padding:0.2rem 0.6rem;border-radius:6px;">
-                {gad_l}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    with st.form(key="screening_form"):
-        tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
-
-        # Demographics
-        with tab1:
-            st.markdown("### School & Personal Information")
-            col1, col2 = st.columns(2)
-            with col1:
-                boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
-                school_type   = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
-                school_demo   = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
-                school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"], key="school_county")
-                age           = st.slider("Age", 12, 25, 16, key="age")
-                gender        = st.selectbox("Gender", ["Male", "Female"], key="gender")
-            with col2:
-                form          = st.selectbox("Form", [1,2,3,4], key="form")
-                religion      = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
-                parents_home  = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
-                parents_dead  = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
-                fathers_edu   = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"], key="fathers_edu")
-                mothers_edu   = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"], key="mothers_edu")
-            col3, col4, col5 = st.columns(3)
-            with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
-            with col4: sports  = st.selectbox("Sports", ["Yes", "No"], key="sports")
-            with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
-
-        # PHQ-8
-        with tab2:
-            st.markdown("### PHQ-8 Depression Assessment")
-            phq_qs = [
-                "Little interest or pleasure in doing things",
-                "Feeling down, depressed, or hopeless",
-                "Trouble falling or staying asleep, or sleeping too much",
-                "Feeling tired or having little energy",
-                "Poor appetite or overeating",
-                "Feeling bad about yourself — or that you are a failure",
-                "Trouble concentrating on things",
-                "Moving or speaking slowly, or being fidgety"
-            ]
-            likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
-            phq = {}
-            for i, q in enumerate(phq_qs, 1):
-                c1, c2 = st.columns([3,1])
-                with c1: st.markdown(f"**{i}.** {q}")
-                with c2:
-                    phq[f'PHQ_{i}'] = st.select_slider(
-                        f"p{i}", options=[0,1,2,3],
-                        format_func=lambda x: likert[x],
-                        label_visibility="collapsed",
-                        key=f"phq_live_{i}",
-                        on_change=update_live_phq
-                    )
-                st.markdown("---")
-
-        # GAD-7
-        with tab3:
-            st.markdown("### GAD-7 Anxiety Assessment")
-            gad_qs = [
-                "Feeling nervous, anxious, or on edge",
-                "Not being able to stop or control worrying",
-                "Worrying too much about different things",
-                "Trouble relaxing",
-                "Being so restless that it is hard to sit still",
-                "Becoming easily annoyed or irritable",
-                "Feeling afraid as if something awful might happen"
-            ]
-            gad = {}
-            for i, q in enumerate(gad_qs, 1):
-                c1, c2 = st.columns([3,1])
-                with c1: st.markdown(f"**{i}.** {q}")
-                with c2:
-                    gad[f'GAD_{i}'] = st.select_slider(
-                        f"g{i}", options=[0,1,2,3],
-                        format_func=lambda x: likert[x],
-                        label_visibility="collapsed",
-                        key=f"gad_live_{i}",
-                        on_change=update_live_gad
-                    )
-                st.markdown("---")
-
-        # Submit
+with tab2:
+    st.markdown("### PHQ-8 (Past 2 Weeks)")
+    phq_qs = [
+        "Little interest or pleasure in doing things",
+        "Feeling down, depressed, or hopeless",
+        "Trouble falling or staying asleep, or sleeping too much",
+        "Feeling tired or having little energy",
+        "Poor appetite or overeating",
+        "Feeling bad about yourself — or that you are a failure",
+        "Trouble concentrating on things",
+        "Moving or speaking slowly, or being fidgety"
+    ]
+    likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+    phq = {}
+    for i, q in enumerate(phq_qs, 1):
+        c1, c2 = st.columns([3,1])
+        with c1: 
+            st.markdown(f"**{i}.** {q}")
+        with c2:
+            phq[f'PHQ_{i}'] = st.select_slider(f"p{i}", options=[0,1,2,3],
+                                               format_func=lambda x: likert[x],
+                                               label_visibility="collapsed")
         st.markdown("---")
-        _, c, _ = st.columns([1,2,1])
-        with c:
-            submitted = st.form_submit_button("Run Screening", use_container_width=True)
+    phq_total = sum(phq.values())
+    st.markdown(f"### PHQ-8 Score: **{phq_total}** / 24")
 
-        # When the user clicks Submit – copy live totals
-        if submitted:
-            st.session_state.submitted = True
-            st.session_state.phq_total = st.session_state.live_phq_total
-            st.session_state.gad_total = st.session_state.live_gad_total
-
-            # Build the final input dictionary
-            st.session_state.input_data = {
-                "Boarding_day": boarding_day,
-                "School_type": school_type,
-                "School_Demographics": school_demo,
-                "School_County": school_county,
-                "Age": int(age),
-                "Gender": 1 if gender == "Male" else 2,
-                "Form": int(form),
-                "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
-                "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
-                "Parents_Dead": int(parents_dead),
-                "Fathers_Education": {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}.get(fathers_edu, 0),
-                "Mothers_Education": {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}.get(mothers_edu, 0),
-                "Co_Curricular": 1 if co_curr == "Yes" else 0,
-                "Sports": 1 if sports == "Yes" else 0,
-                "Percieved_Academic_Abilities": int(acad_ability)
-            }
-            st.session_state.input_data.update(phq)
-            st.session_state.input_data.update(gad)
-
-            st.rerun()
-
-
-# ----------------------------------------------------------------------
-# Results Section (Only after submission)
-# ----------------------------------------------------------------------
-else:
-    if st.session_state.submitted:
+with tab3:
+    st.markdown("### GAD-7 (Past 2 Weeks)")
+    gad_qs = [
+        "Feeling nervous, anxious, or on edge",
+        "Not being able to stop or control worrying",
+        "Worrying too much about different things",
+        "Trouble relaxing",
+        "Being so restless that it is hard to sit still",
+        "Becoming easily annoyed or irritable",
+        "Feeling afraid as if something awful might happen"
+    ]
+    gad = {}
+    for i, q in enumerate(gad_qs, 1):
+        c1, c2 = st.columns([3,1])
+        with c1: 
+            st.markdown(f"**{i}.** {q}")
+        with c2:
+            gad[f'GAD_{i}'] = st.select_slider(f"g{i}", options=[0,1,2,3],
+                                               format_func=lambda x: likert[x],
+                                               label_visibility="collapsed")
         st.markdown("---")
-        st.markdown("## Detailed Risk Reports")
+    gad_total = sum(gad.values())
+    st.markdown(f"### GAD-7 Score: **{gad_total}** / 21")
 
-        # --------------------------------------------------------------
-        # Determine which models to use
-        # --------------------------------------------------------------
-        if selection_mode == "Auto-Select Best":
-            best_dep_model = dep_name
-            best_anx_model = anx_name
-        else:   # Manual or View-All
-            best_dep_model = st.session_state.get("manual_dep_model")
-            best_anx_model = st.session_state.get("manual_anx_model")
+# ----------------------------------------------------------------------
+#  Submit
+# ----------------------------------------------------------------------
+st.markdown("---")
+_, c, _ = st.columns([1,2,1])
+with c:
+    submitted = st.button("Run Screening", use_container_width=True)
 
-        dep_pipe = pipelines.get(best_dep_model)
-        anx_pipe = pipelines.get(best_anx_model)
+# ----------------------------------------------------------------------
+#  SHAP Function
+# ----------------------------------------------------------------------
+def generate_shap_plot(pipe, user_df, target_idx, title):
+    try:
+        pre = pipe.named_steps['preprocessor']
+        clf = pipe.named_steps['clf']
+        X = pre.transform(user_df)
+        if hasattr(X, "toarray"): 
+            X = X.toarray()
+        try:
+            feat = pre.get_feature_names_out()
+        except:
+            feat = [f"f{i}" for i in range(X.shape[1])]
 
-        if not dep_pipe or not anx_pipe:
-            st.error("Selected models not found.")
+        base = clf.estimators_[target_idx] if hasattr(clf, "estimators_") else clf
+
+        if "Logistic" in type(base).__name__:
+            expl = shap.LinearExplainer(base, X)
+            sv = expl.shap_values(X)
         else:
-            # Prepare input
-            input_df = pd.DataFrame([st.session_state.input_data])
-            X = input_df.copy()
+            expl = shap.TreeExplainer(base)
+            sv = expl.shap_values(X)
+            if isinstance(sv, list) and len(sv) == 2:
+                sv = sv[1]
 
-            # ------------------------------------------------------------------
-            # SHAP explanations
-            # ------------------------------------------------------------------
+        if len(sv.shape) > 1 and sv.shape[0] == 1:
+            sv = sv.flatten()
+        mean_abs = np.abs(sv).mean(axis=0) if len(sv.shape) > 1 else np.abs(sv)
+        top_i = np.argsort(mean_abs)[-10:][::-1]
+        top_f = [feat[i] for i in top_i]
+        top_v = mean_abs[top_i]
+
+        fig, ax = plt.subplots(figsize=(10,6))
+        bars = ax.barh(range(len(top_f)), top_v, color=plt.cm.RdYlGn_r(np.linspace(0.2,0.8,10)))
+        ax.set_yticks(range(len(top_f)))
+        ax.set_yticklabels(top_f, fontsize=10)
+        ax.set_xlabel("Mean |SHAP Value|")
+        ax.set_title(title, fontweight="bold")
+        ax.invert_yaxis()
+        for b, v in zip(bars, top_v):
+            ax.text(b.get_width()+0.001, b.get_y()+b.get_height()/2, f"{v:.3f}",
+                    va="center", ha="left", fontsize=9,
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
+        st.caption("Longer bars = greater influence on model output.")
+        return True
+    except Exception as e:
+        st.warning(f"SHAP failed: {e}")
+        return False
+
+# ----------------------------------------------------------------------
+#  Process Submission
+# ----------------------------------------------------------------------
+if submitted:
+    with st.spinner("Processing..."):
+        # --- Clean input ---
+        edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
+        input_data = {
+            "Boarding_day": boarding_day,
+            "School_type": school_type,
+            "School_Demographics": school_demo,
+            "School_County": school_county,
+            "Age": int(age),
+            "Gender": 1 if gender == "Male" else 2,
+            "Form": int(form),
+            "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
+            "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
+            "Parents_Dead": int(parents_dead),
+            "Fathers_Education": edu_map.get(fathers_edu, 0),
+            "Mothers_Education": edu_map.get(mothers_edu, 0),
+            "Co_Curricular": 1 if co_curr == "Yes" else 0,
+            "Sports": 1 if sports == "Yes" else 0,
+            "Percieved_Academic_Abilities": int(acad_ability)
+        }
+        input_data.update(phq)
+        input_data.update(gad)
+        user_df = pd.DataFrame([input_data])
+
+        # --- Predictions ---
+        all_preds = {}
+        for name, pipe in pipelines.items():
             try:
-                with st.spinner("Generating explanations..."):
-                    # Depression
-                    dep_explainer = shap.Explainer(
-                        dep_pipe.named_steps['classifier'],
-                        dep_pipe.named_steps['preprocessor'].transform(X)
-                    )
-                    dep_shap_values = dep_explainer(
-                        dep_pipe.named_steps['preprocessor'].transform(X)
-                    )
+                p = pipe.predict(user_df)[0]
+                all_preds[name] = {'dep': p[0], 'anx': p[1] if len(p) > 1 else None}
+            except:
+                all_preds[name] = {'dep': None, 'anx': None}
 
-                    # Anxiety
-                    anx_explainer = shap.Explainer(
-                        anx_pipe.named_steps['classifier'],
-                        anx_pipe.named_steps['preprocessor'].transform(X)
-                    )
-                    anx_shap_values = anx_explainer(
-                        anx_pipe.named_steps['preprocessor'].transform(X)
-                    )
-            except Exception as e:
-                st.warning(f"SHAP explanation failed: {e}")
-                dep_shap_values = None
-                anx_shap_values = None
+        # --- Select models ---
+        best_dep_model = max(model_metrics.items(),
+                             key=lambda x: x[1].get('test_recall_per_target',{}).get('Is_Depressed',0))[0] \
+                         if model_metrics else None
+        best_anx_model = max(model_metrics.items(),
+                             key=lambda x: x[1].get('test_recall_per_target',{}).get('Has_anxiety',0))[0] \
+                         if model_metrics else None
 
-            # ------------------------------------------------------------------
-            # Predictions
-            # ------------------------------------------------------------------
-            dep_pred = dep_pipe.predict(X)[0]
-            anx_pred = anx_pipe.predict(X)[0]
+        dep_pred = all_preds.get(best_dep_model, {}).get('dep', 'N/A')
+        anx_pred = all_preds.get(best_anx_model, {}).get('anx', 'N/A')
 
-            # ------------------------------------------------------------------
-            # Category labels
-            # ------------------------------------------------------------------
-            def get_dep_cat(score):
-                if score < 5: return "Minimal"
-                if score < 10: return "Mild"
-                if score < 15: return "Moderate"
-                if score < 20: return "Moderately Severe"
-                return "Severe"
+        dep_rec = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
+        dep_acc = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+        anx_rec = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
+        anx_acc = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
 
-            def get_anx_cat(score):
-                if score < 5: return "Minimal"
-                if score < 10: return "Mild"
-                if score < 15: return "Moderate"
-                return "Severe"
+        # --- Severity categories (standardized) ---
+        dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
+        anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
 
-            dep_cat = get_dep_cat(st.session_state.phq_total)
-            anx_cat = get_anx_cat(st.session_state.gad_total)
+        # --- Results --
+        st.markdown("---")
+        st.markdown("## Screening Results")
 
-            # ------------------------------------------------------------------
-            # DEPRESSION REPORT
-            # ------------------------------------------------------------------
-            st.markdown("### Depression Risk Breakdown")
-            col_d1, col_d2 = st.columns([1, 2])
+        c1, c2 = st.columns(2)
+        with c1:
+            st.info(f"**Depression Model:** {best_dep_model or 'N/A'}")
+            if best_dep_model:
+                st.caption(f"Recall: {dep_rec:.1%} | Accuracy: {dep_acc:.1%}")
+        with c2:
+            st.info(f"**Anxiety Model:** {best_anx_model or 'N/A'}")
+            if best_anx_model:
+                st.caption(f"Recall: {anx_rec:.1%} | Accuracy: {anx_acc:.1%}")
+        st.markdown("---")
 
-            with col_d1:
-                st.markdown(f"""
-                <div class="score-card" style="text-align:center; padding:1.5rem;">
-                    <h3 style="margin:0; color:#c0392b;">PHQ-8 Score</h3>
-                    <div style="font-size:3rem; font-weight:800; color:#c0392b;">
-                        {st.session_state.phq_total}<small style="font-size:1.5rem;">/24</small>
-                    </div>
-                    <div style="font-size:1.1rem; font-weight:600; color:#c0392b;">
-                        {dep_cat}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Key Demographics
-                st.markdown("**Key Risk Factors**")
-                demo_items = [
-                    ("Age", X.iloc[0]['Age']),
-                    ("Gender", "Male" if X.iloc[0]['Gender'] == 1 else "Female"),
-                    ("School Type", X.iloc[0]['Boarding_day']),
-                    ("Parents at Home", {0:"None",1:"One",2:"Both"}.get(X.iloc[0]['Parents_Home'], "Unknown")),
-                    ("Academic Self-Rating", X.iloc[0]['Percieved_Academic_Abilities'])
-                ]
-                for label, value in demo_items:
-                    st.markdown(f"- **{label}**: {value}")
-
-            with col_d2:
-                if dep_shap_values is not None:
-                    st.markdown("**How Each Factor Contributes**")
-                    fig, ax = plt.subplots()
-                    shap.plots.waterfall(dep_shap_values[0], max_display=10, show=False)
-                    st.pyplot(fig, use_container_width=True)
-                    plt.clf()
-                else:
-                    st.info("SHAP visualization unavailable.")
-
-            # ------------------------------------------------------------------
-            # ANXIETY REPORT
-            # ------------------------------------------------------------------
-            st.markdown("### Anxiety Risk Breakdown")
-            col_a1, col_a2 = st.columns([1, 2])
-
-            with col_a1:
-                st.markdown(f"""
-                <div class="score-card" style="text-align:center; padding:1.5rem;">
-                    <h3 style="margin:0; color:#e67e22;">GAD-7 Score</h3>
-                    <div style="font-size:3rem; font-weight:800; color:#e67e22;">
-                        {st.session_state.gad_total}<small style="font-size:1.5rem;">/21</small>
-                    </div>
-                    <div style="font-size:1.1rem; font-weight:600; color:#e67e22;">
-                        {anx_cat}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.markdown("**Key Risk Factors**")
-                for label, value in demo_items:
-                    st.markdown(f"- **{label}**: {value}")
-
-            with col_a2:
-                if anx_shap_values is not None:
-                    st.markdown("**How Each Factor Contributes**")
-                    fig, ax = plt.subplots()
-                    shap.plots.waterfall(anx_shap_values[0], max_display=10, show=False)
-                    st.pyplot(fig, use_container_width=True)
-                    plt.clf()
-                else:
-                    st.info("SHAP visualization unavailable.")
-
-            # ------------------------------------------------------------------
-            # FINAL SUMMARY
-            # ------------------------------------------------------------------
-            st.markdown("---")
-            st.markdown("## Final Interpretation")
-            risk_level = "High" if (dep_pred == 1 or anx_pred == 1) else "Low"
-            color = "#c0392b" if risk_level == "High" else "#27ae60"
-
+        col1, col2 = st.columns(2)
+        with col1:
             st.markdown(f"""
-            <div style="text-align:center; padding:2rem; background:linear-gradient(135deg, {color}20, {color}10); border-radius:16px; border:2px solid {color};">
-                <h2 style="color:{color}; margin:0;">Overall Risk: <strong>{risk_level}</strong></h2>
-                <p style="font-size:1.1rem; color:#333; margin:1rem 0;">
-                    { "Immediate support recommended." if risk_level == "High" else "Continue monitoring and support." }
-                </p>
+            <div class="score-card" style="border-left:5px solid #1f77b4">
+                <h3 style="margin:0;color:#1f77b4">PHQ-8</h3>
+                <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+                <div class="score-label">{dep_cat}</div>
             </div>
             """, unsafe_allow_html=True)
+            if best_dep_model:
+                st.markdown(f"**Model Prediction:** `{dep_pred}`")
 
+        with col2:
+            st.markdown(f"""
+            <div class="score-card" style="border-left:5px solid #ff7f0e">
+                <h3 style="margin:0;color:#ff7f0e">GAD-7</h3>
+                <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+                <div class="score-label">{anx_cat}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if best_anx_model:
+                st.markdown(f"**Model Prediction:** `{anx_pred}`")
 
-# ----------------------------------------------------------------------
-# FULL RISK REPORT + PDF DOWNLOAD + CRISIS HOTLINE
-# ----------------------------------------------------------------------
-if st.session_state.submitted:
-    st.markdown("---")
-    st.markdown("## Full Risk Report")
-
-    st.markdown("### Download Report")
-    if st.button("Generate PDF Report", key="pdf_gen"):
-        with st.spinner("Creating PDF..."):
-            import pdfkit
-            from datetime import datetime
-
-            html_content = f"""
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial; padding: 20px; }}
-                    .header {{ text-align: center; color: #1f77b4; }}
-                    .score {{ font-size: 2rem; font-weight: bold; }}
-                    .risk-high {{ color: #c0392b; }} .risk-low {{ color: #27ae60; }}
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>AdolescentMind Screening Report</h1>
-                    <p>Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
-                </div>
-                <hr>
-                <h2>Depression (PHQ-8)</h2>
-                <p class="score">Score: {st.session_state.phq_total}/24 → <strong>{dep_cat}</strong></p>
-                <h2>Anxiety (GAD-7)</h2>
-                <p class="score">Score: {st.session_state.gad_total}/21 → <strong>{anx_cat}</strong></p>
-                <h2>Final Risk Level</h2>
-                <p class="score {'risk-high' if risk_level == 'High' else 'risk-low'}">
-                    <strong>{risk_level} Risk</strong>
-                </p>
-                <hr>
-                <p><em>This is a screening tool, not a diagnosis. Consult a professional.</em></p>
-            </body>
-            </html>
-            """
-
-            pdf = pdfkit.from_string(html_content, False)
-            st.download_button(
-                label="Download PDF",
-                data=pdf,
-                file_name=f"AdolescentMind_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                mime="application/pdf"
-            )
-
-    if risk_level == "High":
+        # --- SHAP ---
         st.markdown("---")
-        st.markdown("""
-        <div style="background:#ffebee; padding:1.5rem; border-radius:12px; border-left:6px solid #c0392b;">
-            <h3 style="color:#c0392b; margin-top:0;">Immediate Support Needed</h3>
-            <p><strong>Kenya Mental Health Helpline:</strong> <a href="tel:1199">1199</a></p>
-            <p><strong>Befrienders Kenya:</strong> <a href="tel:+254722178177">0722 178 177</a></p>
-            <p><em>You're not alone. Help is available 24/7.</em></p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("### Model Explanations")
+        tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
+        with tab_d:
+            if best_dep_model and pipelines.get(best_dep_model):
+                generate_shap_plot(pipelines[best_dep_model], user_df,
+                                   target_idx=0, title="Depression Risk Factors")
+            else:
+                st.info("No model available.")
+        with tab_a:
+            if best_anx_model and pipelines.get(best_anx_model):
+                generate_shap_plot(pipelines[best_anx_model], user_df,
+                                   target_idx=0 if best_dep_model != best_anx_model else 1,
+                                   title="Anxiety Risk Factors")
+            else:
+                st.info("No model available.")
+
+        # --- Crisis Alert ---
+        if phq_total >= 15 or gad_total >= 15:
+            st.markdown("---")
+            st.error("### High Score Detected")
+            st.markdown("""
+            **Immediate support is recommended.**
+            - **Kenya Red Cross:** 1199  
+            - **Befrienders Kenya:** +254 722 178 177  
+            - **School Counselor**
+            """)
+
+        # --- Download ---
+        st.markdown("---")
+        report = f"""
+SCREENING RESULTS
+Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
+
+PHQ-8 Score: {phq_total}/24 → {dep_cat}
+GAD-7 Score: {gad_total}/21 → {anx_cat}
+
+Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred}
+Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred}
+
+This is a screening tool only. Not a diagnosis.
+        """
+        st.download_button("Download Results", report,
+                           file_name=f"screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
+                           mime="text/plain")
+
+        # --- Disclaimer ---
+        st.markdown("---")
+        st.warning("""
+        **SCREENING ONLY**  
+        This tool uses PHQ-8 and GAD-7 for screening.  
+        Results are **not a diagnosis**.  
+        High scores indicate need for professional evaluation.
+        """)
