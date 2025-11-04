@@ -433,8 +433,7 @@ if not st.session_state.submitted:
         with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
         with col4: sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
         with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
-
-        with tab2:
+    with tab2:
         st.markdown("### PHQ-8 Depression Assessment")
         st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
         st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
@@ -495,7 +494,7 @@ if not st.session_state.submitted:
         </div>
         """, unsafe_allow_html=True)
 
-        with tab3:
+    with tab3:
         st.markdown("### GAD-7 Anxiety Assessment")
         st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms...")
         st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
@@ -550,6 +549,7 @@ if not st.session_state.submitted:
             <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {gad_severity}</div>
         </div>
         """, unsafe_allow_html=True)
+
 #  Submit
 # ----------------------------------------------------------------------
 st.markdown("---")
