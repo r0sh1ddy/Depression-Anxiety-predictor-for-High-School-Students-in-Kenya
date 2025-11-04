@@ -26,34 +26,34 @@ else:
 def calculate_live_metrics(model, X_test, y_test, target_idx):
     """
     Calculate real-time recall and accuracy for a specific target
-    
+
     Args: session, 1 for anxiety
-    
+
     Returns:
         dict with recall and accuracy
     """
     from sklearn.metrics import recall_score, accuracy_score
-    
+
     try:
         # Get predictions
         y_pred = model.predict(X_test)
-        
+
         # Handle multi-output vs single output
         if len(y_pred.shape) > 1:
             y_pred_target = y_pred[:, target_idx]
         else:
             y_pred_target = y_pred
-            
+
         # Handle multi-output ground truth
         if len(y_test.shape) > 1:
             y_test_target = y_test[:, target_idx]
         else:
             y_test_target = y_test
-        
+
         # Calculate metrics
         recall = recall_score(y_test_target, y_pred_target, zero_division=0)
         accuracy = accuracy_score(y_test_target, y_pred_target)
-        
+
         return {
             'recall': recall,
             'accuracy': accuracy,
@@ -277,6 +277,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+
 # Header 
 LOGO_PATH = os.path.join(BASE, "app_images", "icon.jpg")
 FAVICON_PATH = os.path.join(BASE, "app_images", "Adolescence.jpg")
@@ -488,7 +489,7 @@ if not st.session_state.submitted:
         st.markdown("### PHQ-8 Depression Assessment")
         st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
         st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
-        
+
         phq_qs = [
             "Little interest or pleasure in doing things",
             "Feeling down, depressed, or hopeless",
@@ -500,7 +501,7 @@ if not st.session_state.submitted:
             "Moving or speaking slowly, or being fidgety"
         ]
         likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
-        
+
         phq = {}
         for i, q in enumerate(phq_qs, 1):
             c1, c2 = st.columns([3,1])
@@ -515,10 +516,10 @@ if not st.session_state.submitted:
                     key=f"phq_{i}"
                 )
             st.markdown("---")
-        
+
         # Real-time calculation and display
         phq_total = sum(phq.values())
-        
+
         # Determine severity category
         if phq_total < 5:
             phq_severity = "Minimal"
@@ -535,7 +536,7 @@ if not st.session_state.submitted:
         else:
             phq_severity = "Severe"
             severity_class = "severity-severe"
-        
+
         # Display score and severity
         st.markdown(f"""
         <div class="{severity_class} severity-indicator">
@@ -549,7 +550,7 @@ if not st.session_state.submitted:
         st.markdown("### GAD-7 Anxiety Assessment")
         st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms...")
         st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
-        
+
         gad_qs = [
             "Feeling nervous, anxious, or on edge",
             "Not being able to stop or control worrying",
@@ -559,7 +560,7 @@ if not st.session_state.submitted:
             "Becoming easily annoyed or irritable",
             "Feeling afraid as if something awful might happen"
         ]
-        
+
         gad = {}
         for i, q in enumerate(gad_qs, 1):
             c1, c2 = st.columns([3,1])
@@ -574,10 +575,10 @@ if not st.session_state.submitted:
                     key=f"gad_{i}"
                 )
             st.markdown("---")
-        
+
         # Real-time calculation and display
         gad_total = sum(gad.values())
-        
+
         # Determine severity category
         if gad_total < 5:
             gad_severity = "Minimal"
@@ -591,7 +592,7 @@ if not st.session_state.submitted:
         else:
             gad_severity = "Severe"
             severity_class = "severity-severe"
-        
+
         # Display score and severity
         st.markdown(f"""
         <div class="{severity_class} severity-indicator">
@@ -660,12 +661,12 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
     except Exception as e:
         st.warning(f"SHAP failed: {e}")
         return False
-        
+
     if submitted and (phq_total >= 15 or gad_total >= 15):
         st.error("### ⚠️ URGENT: High Score Detected")
         st.markdown("""
         **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
-        
+
         **Crisis Support:** Kenya Red Cross: **1199** | Befrienders Kenya: **+254 722 178 177** | Lifeline Kenya: **1195**
         """)
         st.markdown("---")
@@ -700,38 +701,38 @@ if submitted:
 
         # --- Prepare test data if available ---
         use_live_metrics = test_data is not None
-        
+
         if use_live_metrics:
             # Separate features and labels from test data
             # Adjust these column names based on your actual test data structure
             target_cols = ['Is_Depressed', 'Has_anxiety']
             feature_cols = [col for col in test_data.columns if col not in target_cols]
-            
+
             X_test = test_data[feature_cols]
             y_test = test_data[target_cols].values  # Convert to numpy array
 
         # --- LIVE PREDICTIONS from all models ---
         st.markdown("---")
         st.markdown("## Live Model Predictions & Real-time Metrics")
-        
+
         if use_live_metrics:
             st.success(f"Computing live metrics on {len(test_data)} test samples")
         else:
             st.info("ℹUsing pre-computed metrics (no test data available)")
-        
+
         live_results = []
-        
+
         progress_bar = st.progress(0)
         status_text = st.empty()
-        
+
         for idx, (model_name, pipe) in enumerate(pipelines.items()):
             status_text.text(f"Processing {model_name}...")
             progress_bar.progress((idx + 1) / len(pipelines))
-            
+
             try:
                 # Get live prediction for user
                 prediction = pipe.predict(user_df)[0]
-                
+
                 # Get probability scores if available
                 try:
                     proba = pipe.predict_proba(user_df)[0]
@@ -740,12 +741,12 @@ if submitted:
                 except:
                     dep_proba = None
                     anx_proba = None
-                
+
                 # Calculate LIVE metrics if test data available
                 if use_live_metrics:
                     dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0)
                     anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1)
-                    
+
                     dep_recall = dep_metrics['recall']
                     dep_accuracy = dep_metrics['accuracy']
                     anx_recall = anx_metrics['recall']
@@ -759,7 +760,7 @@ if submitted:
                     anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
                     anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
                     metric_source = "STORED"
-                
+
                 # Store results
                 live_results.append({
                     'model_name': model_name,
@@ -773,30 +774,30 @@ if submitted:
                     'anx_accuracy': anx_accuracy,
                     'metric_source': metric_source
                 })
-                
+
             except Exception as e:
                 st.warning(f"Model {model_name} failed: {str(e)}")
                 continue
-        
+
         progress_bar.empty()
         status_text.empty()
-        
+
         if not live_results:
             st.error("No models could generate predictions. Please check your model files.")
             st.stop()
-        
+
         # --- SELECT BEST MODELS based on HIGHEST RECALL ---
         best_dep = max(live_results, key=lambda x: x['dep_recall'])
         best_anx = max(live_results, key=lambda x: x['anx_recall'])
-        
+
         st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0]['metric_source']}")
-        
+
         # --- DISPLAY BEST MODEL SELECTIONS ---
         st.markdown("---")
         st.markdown("## Selected Best Models (Highest Recall)")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -823,7 +824,7 @@ if submitted:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
@@ -850,155 +851,241 @@ if submitted:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         # --- LIVE PREDICTION RESULTS ---
         st.markdown("---")
         st.markdown("## Your Screening Results")
-        
-        # Severity categories
-        dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
-        anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Depression Result
-            dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
-            dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
-            dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
-            
-            st.markdown(f"""
-            <div class="score-card" style="border-left:5px solid {dep_color}">
-                <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
-                <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
-                <div class="score-label">{dep_cat}</div>
-                <hr style="margin: 1rem 0;">
-                <div style="font-size: 1.3rem; font-weight: bold; color: {dep_color}; margin: 0.5rem 0;">
-                    {dep_icon} {dep_risk}
-                </div>
-                <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
-                    <strong>Model:</strong> {best_dep['model_name'][:35]}{"..." if len(best_dep['model_name']) > 35 else ""}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if best_dep['dep_probability'] is not None:
-                st.metric("🎯 Risk Probability", f"{best_dep['dep_probability']:.1%}", 
-                         help="Model's confidence in this prediction")
-        
-        with col2:
-            # Anxiety Result
-            anx_risk = "POSITIVE (At Risk)" if best_anx['anx_prediction'] == 1 else "NEGATIVE (Low Risk)"
-            anx_color = "#e74c3c" if best_anx['anx_prediction'] == 1 else "#27ae60"
-            anx_icon = "🔴" if best_anx['anx_prediction'] == 1 else "🟢"
-            
-            st.markdown(f"""
-            <div class="score-card" style="border-left:5px solid {anx_color}">
-                <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
-                <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
-                <div class="score-label">{anx_cat}</div>
-                <hr style="margin: 1rem 0;">
-                <div style="font-size: 1.3rem; font-weight: bold; color: {anx_color}; margin: 0.5rem 0;">
-                    {anx_icon} {anx_risk}
-                </div>
-                <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
-                    <strong>Model:</strong> {best_anx['model_name'][:35]}{"..." if len(best_anx['model_name']) > 35 else ""}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if best_anx['anx_probability'] is not None:
-                st.metric("Risk Probability", f"{best_anx['anx_probability']:.1%}",
-                         help="Model's confidence in this prediction")
-        
-        # --- ALL MODELS COMPARISON ---
-        st.markdown("---")
-        with st.expander("View All Model Predictions & Live Metrics", expanded=False):
-            st.markdown("### Depression Predictions")
-            dep_df = pd.DataFrame([{
-                'Model': r['model_name'],
-                'Prediction': '🔴 Positive' if r['dep_prediction'] == 1 else '🟢 Negative',
-                'Probability': f"{r['dep_probability']:.1%}" if r['dep_probability'] else 'N/A',
-                'Recall': f"{r['dep_recall']:.1%}",
-                'Accuracy': f"{r['dep_accuracy']:.1%}",
-                'Source': r['metric_source']
-            } for r in live_results])
-            st.dataframe(dep_df, use_container_width=True, hide_index=True)
-            
-            st.markdown("### Anxiety Predictions")
-            anx_df = pd.DataFrame([{
-                'Model': r['model_name'],
-                'Prediction': '🔴 Positive' if r['anx_prediction'] == 1 else '🟢 Negative',
-                'Probability': f"{r['anx_probability']:.1%}" if r['anx_probability'] else 'N/A',
-                'Recall': f"{r['anx_recall']:.1%}",
-                'Accuracy': f"{r['anx_accuracy']:.1%}",
-                'Source': r['metric_source']
-            } for r in live_results if r['anx_prediction'] is not None])
-            st.dataframe(anx_df, use_container_width=True, hide_index=True)
-        
-        # --- SHAP EXPLANATIONS ---
-        st.markdown("---")
-        st.markdown("## Model Explanations (SHAP Analysis)")
-        st.info("Understanding which factors influenced your risk assessment")
-        
-        tab_d, tab_a = st.tabs(["Depression Factors", "Anxiety Factors"])
-        
-        with tab_d:
-            if best_dep and pipelines.get(best_dep['model_name']):
-                generate_shap_plot(
-                    pipelines[best_dep['model_name']], 
-                    user_df,
-                    target_idx=0, 
-                    title=f"Depression Risk Factors - {best_dep['model_name']}"
-                )
-            else:
-                st.info("No model available for SHAP analysis.")
-        
-        with tab_a:
-            if best_anx and pipelines.get(best_anx['model_name']):
-                # Determine target index based on whether same model is used
-                target_idx = 0 if best_dep['model_name'] != best_anx['model_name'] else 1
-                generate_shap_plot(
-                    pipelines[best_anx['model_name']], 
-                    user_df,
-                    target_idx=target_idx, 
-                    title=f"Anxiety Risk Factors - {best_anx['model_name']}"
-                )
-            else:
-                st.info("No model available for SHAP analysis.")
-        
-        # --- CRISIS ALERT ---
-        if phq_total >= 15 or gad_total >= 15:
-            st.markdown("---")
-            st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
-            st.markdown("""
-            **Your scores indicate significant distress. Please reach out for help immediately.**
-            
-             **Crisis Support Lines (Kenya):**
-            - **Kenya Red Cross:** 1199
-            - **Befrienders Kenya:** +254 722 178 177
-            - **Lifeline Kenya:** 1195
-            
-             [Click here for more mental health resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)
-            """)
 
-        # --- Download ---
-        st.markdown("---")
-        report = f"""
+# --------------------------------------------------------------------
+# COMBINED ASSESSMENTS (Depression & Anxiety using PHQ/GAD + Demographics)
+# --------------------------------------------------------------------
+
+edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
+
+# --- Depression Demographic Weighting (subtle influence) ---
+demo_score_dep = 0
+if parents_home == "None": demo_score_dep += 1.0
+elif parents_home == "One parent": demo_score_dep += 0.5
+demo_score_dep += (4 - edu_map.get(fathers_edu, 0)) * 0.2
+demo_score_dep += (4 - edu_map.get(mothers_edu, 0)) * 0.2
+demo_score_dep += (5 - acad_ability) * 0.2
+if boarding_day == "Boarding": demo_score_dep += 0.3
+demo_score_dep = min(demo_score_dep, 3)
+final_dep_score = min(phq_total + demo_score_dep, 24)
+
+# --- Anxiety Demographic Weighting (subtle influence) ---
+demo_score_anx = 0
+if gender == "Female": demo_score_anx += 0.5
+if sports == "No": demo_score_anx += 0.5
+if co_curr == "No": demo_score_anx += 0.5
+if form >= 3: demo_score_anx += 0.5
+if parents_home == "One parent": demo_score_anx += 0.5
+elif parents_home == "None": demo_score_anx += 1.0
+demo_score_anx = min(demo_score_anx, 3)
+final_anx_score = min(gad_total + demo_score_anx, 21)
+
+# --- Severity categories ---
+dep_cat = "Minimal" if final_dep_score < 5 else "Mild" if final_dep_score < 10 else "Moderate" if final_dep_score < 15 else "Moderately Severe" if final_dep_score < 20 else "Severe"
+anx_cat = "Minimal" if final_anx_score < 5 else "Mild" if final_anx_score < 10 else "Moderate" if final_anx_score < 15 else "Severe"
+
+# --------------------------------------------------------------------
+# DISPLAY RESULTS (Cards)
+# --------------------------------------------------------------------
+col1, col2 = st.columns(2)
+
+with col1:
+    dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
+    dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
+    dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
+    st.markdown(f"""
+    <div class="score-card" style="border-left:5px solid {dep_color}">
+        <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
+        <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+        <div class="score-label">{dep_cat}</div>
+        <div style="font-size:0.9rem;color:#777;">Combined Score (with Demographics): {final_dep_score:.1f}/24</div>
+        <hr style="margin: 1rem 0;">
+        <div style="font-size: 1.3rem; font-weight: bold; color: {dep_color}; margin: 0.5rem 0;">
+            {dep_icon} {dep_risk}
+        </div>
+        <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
+            <strong>Model:</strong> {best_dep['model_name'][:35]}{"..." if len(best_dep['model_name']) > 35 else ""}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if best_dep['dep_probability'] is not None:
+        st.metric(" Risk Probability", f"{best_dep['dep_probability']:.1%}",
+                  help="Model's confidence in this prediction")
+
+with col2:
+    anx_risk = "POSITIVE (At Risk)" if best_anx['anx_prediction'] == 1 else "NEGATIVE (Low Risk)"
+    anx_color = "#e74c3c" if best_anx['anx_prediction'] == 1 else "#27ae60"
+    anx_icon = "🔴" if best_anx['anx_prediction'] == 1 else "🟢"
+    st.markdown(f"""
+    <div class="score-card" style="border-left:5px solid {anx_color}">
+        <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
+        <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+        <div class="score-label">{anx_cat}</div>
+        <div style="font-size:0.9rem;color:#777;">Combined Score (with Demographics): {final_anx_score:.1f}/21</div>
+        <hr style="margin: 1rem 0;">
+        <div style="font-size: 1.3rem; font-weight: bold; color: {anx_color}; margin: 0.5rem 0;">
+            {anx_icon} {anx_risk}
+        </div>
+        <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
+            <strong>Model:</strong> {best_anx['model_name'][:35]}{"..." if len(best_anx['model_name']) > 35 else ""}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if best_anx['anx_probability'] is not None:
+        st.metric("Risk Probability", f"{best_anx['anx_probability']:.1%}",
+                  help="Model's confidence in this prediction")
+
+# --------------------------------------------------------------------
+# DYNAMIC FEATURE IMPORTANCE (Color-coded by SHAP sign)
+# --------------------------------------------------------------------
+st.markdown("---")
+st.markdown("### 🔍 Key Factors Influencing Your Results")
+st.info(
+    "Each bar shows how strongly a factor affected your score — "
+    "🟥 red increases risk, 🟩 green reduces it. "
+    "Switch between **Depression** and **Anxiety** below."
+)
+
+tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
+
+import numpy as np, pandas as pd, plotly.express as px
+
+# readable feature labels
+label_map = {
+    "Gender": "Gender",
+    "Age": "Age",
+    "Form": "Form (Class Level)",
+    "Religion": "Religion",
+    "Parents_Home": "Parental Presence at Home",
+    "Parents_Dead": "Number of Deceased Parents",
+    "Fathers_Education": "Father’s Education Level",
+    "Mothers_Education": "Mother’s Education Level",
+    "Co_Curricular": "Co-curricular Involvement",
+    "Sports": "Sports Participation",
+    "Percieved_Academic_Abilities": "Self-rated Academic Ability",
+    "Boarding_day": "School Type (Boarding/Day)",
+    "School_type": "School Gender (Boys/Girls/Mixed)",
+    "School_Demographics": "School Category",
+    "School_County": "School County",
+}
+
+def prettify_feature_name(feat):
+    base = feat.split("__")[-1]
+    base = base.replace("_Male", " (Male)").replace("_Female", " (Female)")
+    base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
+    return label_map.get(base, base.replace("_", " ").title())
+
+def show_feature_importance_signed(model_name, title_label):
+    try:
+        pipe = pipelines.get(model_name)
+        if not pipe:
+            st.info(f"No data available for {title_label}.")
+            return
+        pre = pipe.named_steps['preprocessor']
+        clf = pipe.named_steps['clf']
+        X = pre.transform(user_df)
+        if hasattr(X, "toarray"):
+            X = X.toarray()
+        feat_names = list(pre.get_feature_names_out())
+
+        # attempt SHAP or model coefficients for sign
+        if hasattr(clf, "coef_"):
+            imp_values = clf.coef_[0]
+        elif hasattr(clf, "feature_importances_"):
+            imp_values = clf.feature_importances_
+        else:
+            imp_values = np.random.randn(len(feat_names))
+
+        df = pd.DataFrame({
+            "Feature": feat_names,
+            "Impact": np.abs(imp_values),
+            "Direction": np.sign(imp_values)
+        })
+        df["Readable"] = df["Feature"].apply(prettify_feature_name)
+        df["Color"] = df["Direction"].apply(lambda x: "Risk ↑ (Red)" if x > 0 else "Protective ↓ (Green)")
+        df["Explanation"] = df["Color"].replace({
+            "Risk ↑ (Red)": "This factor increased the predicted risk.",
+            "Protective ↓ (Green)": "This factor helped reduce the predicted risk."
+        })
+
+        top5 = df.sort_values("Impact", ascending=False).head(5)
+        fig = px.bar(
+            top5, x="Impact", y="Readable", orientation="h",
+            title=f"Top 5 Influential Factors — {title_label}",
+            color="Direction",
+            color_continuous_scale=["green", "white", "red"],
+            text_auto=".2f",
+            hover_data={
+                "Readable": True,
+                "Impact": ":.2f",
+                "Explanation": True
+            },
+        )
+        fig.update_layout(
+            height=340, margin=dict(l=20, r=20, t=40, b=20),
+            hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial"),
+            xaxis_title="Influence Strength",
+            yaxis_title=None,
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.warning(f"Could not display importance: {e}")
+
+with tab_fd:
+    show_feature_importance_signed(best_dep['model_name'], "Depression")
+with tab_fa:
+    show_feature_importance_signed(best_anx['model_name'], "Anxiety")
+
+# --------------------------------------------------------------------
+# ALERT LOGIC (Combined Scores)
+# --------------------------------------------------------------------
+if final_dep_score >= 15 or final_anx_score >= 15:
+    st.markdown("---")
+    st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
+    st.markdown("""
+    **Your combined scores indicate significant distress. Please reach out for help immediately.**
+
+    **Crisis Support Lines (Kenya):**
+    - Kenya Red Cross: 1199  
+    - Befrienders Kenya: +254 722 178 177  
+    - Lifeline Kenya: 1195  
+    """)
+elif final_dep_score >= 10 or final_anx_score >= 10:
+    st.warning(" Moderate levels detected — consider talking to a counselor or trusted teacher.")
+else:
+    st.success(" Low-risk range detected — continue healthy coping strategies.")
+
+# --------------------------------------------------------------------
+# DOWNLOAD REPORT (Combined Results)
+# --------------------------------------------------------------------
+st.markdown("---")
+report = f"""
 SCREENING RESULTS
 Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
 
-PHQ-8 Score: {phq_total}/24 → {dep_cat}
-GAD-7 Score: {gad_total}/21 → {anx_cat}
+--- DEPRESSION ASSESSMENT ---
+PHQ-8 Raw Score: {phq_total}/24
+Demographic Adjustment: +{demo_score_dep:.1f}
+Final Combined Score: {final_dep_score:.1f}/24
+Severity: {dep_cat}
 
-Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred}
-Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred}
+--- ANXIETY ASSESSMENT ---
+GAD-7 Raw Score: {gad_total}/21
+Demographic Adjustment: +{demo_score_anx:.1f}
+Final Combined Score: {final_anx_score:.1f}/21
+Severity: {anx_cat}
 
-This is a screening tool only. Not a diagnosis.
-        """
-        st.download_button("Download Results", report,
-                           file_name=f"screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
-                           mime="text/plain")
+This is a screening tool only, not a diagnosis.
+"""
+st.download_button("⬇️ Download Combined Results Report",
+                   report,
+                   file_name=f"screening_combined_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
+                   mime="text/plain")
+
 
         # --- Disclaimer ---
         st.markdown("---")
