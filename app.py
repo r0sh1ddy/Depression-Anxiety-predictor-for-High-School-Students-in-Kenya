@@ -571,27 +571,26 @@ else:
             }
             feature_names = [friendly_names.get(f, f.replace("_", " ")) for f in feature_names]
 
-            # Compute SHAP values
+            # Choose the right SHAP explainer automatically
             base = clf.estimators_[target_idx] if hasattr(clf, "estimators_") else clf
-            explainer = shap.TreeExplainer(base) if hasattr(base, "predict_proba") else shap.LinearExplainer(base, X)
-            shap_values = explainer.shap_values(X)
 
-            # Handle multioutput
-            if isinstance(shap_values, list):
-                shap_values = shap_values[target_idx] if len(shap_values) > 1 else shap_values[0]
+            # Use shap.Explainer (unified API handles both tree & linear models)
+            explainer = shap.Explainer(base, X, feature_names=feature_names)
+            shap_values = explainer(X)
 
+            # Single sample → use shap_values.values[0]
             shap_df = pd.DataFrame({
                 "Feature": feature_names,
-                "Impact": shap_values[0]  # single sample
+                "Impact": shap_values.values[0]
             })
             shap_df["Direction"] = shap_df["Impact"].apply(
                 lambda x: "Increased Risk" if x > 0 else "Reduced Risk"
             )
             shap_df["AbsImpact"] = shap_df["Impact"].abs()
 
-            # Top features
+            # Top 10 features
             top_features = shap_df.sort_values("AbsImpact", ascending=False).head(10)
-            top_features = top_features.sort_values("Impact", ascending=True)  # negatives (green) on top
+            top_features = top_features.sort_values("Impact", ascending=True)
 
             # Plot
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -629,6 +628,7 @@ else:
         except Exception as e:
             st.warning(f"Unable to generate simplified SHAP: {e}")
             return False
+
 
     with tab_d:
         if best_dep_model and pipelines.get(best_dep_model):
