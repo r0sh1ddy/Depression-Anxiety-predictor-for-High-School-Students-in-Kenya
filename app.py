@@ -171,10 +171,10 @@ with tab1:
     st.markdown("### School & Personal Information")
     col1, col2 = st.columns(2)
     with col1:
-        boarding_day = st.selectbox("School Type", ["Boarding", "Day"])
+        boarding_day = st.selectbox("School Demo", ["Boarding", "Day"])
         school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"])
-        school_demo = st.selectbox("Location", ["Urban", "Rural", "Semi-urban"])
-        school_county = st.selectbox("County", ["Nairobi","Kiambu","Kisumu","Mombasa","Nakuru","Other"])
+        school_demo = st.selectbox("School Type", ['Subcounty', 'Extracounty', 'County'])
+        school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"])
         age = st.slider("Age", 12, 25, 16)
         gender = st.selectbox("Gender", ["Male", "Female"])
     with col2:
