@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 # ----------------------------------------------------------------------
 #  Page config & CSS
 # ----------------------------------------------------------------------
-icon_path = "app_images/icon.jpg"
-logo_path = "app_images/icon.jpg"
+icon_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
+logo_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
 
 st.set_page_config(
     page_title="AdolescentMind",
