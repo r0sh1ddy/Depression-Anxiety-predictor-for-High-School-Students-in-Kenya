@@ -42,7 +42,7 @@ if os.path.exists(LOGO_PATH):
     with col2:
         st.image(LOGO_PATH, use_container_width=True)
 else:
-    st.markdown('<div class="main-header">Mental Health Screening Tool</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">AdolecentMind</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="sub-header">Depression & Anxiety Screening for Kenyan High School Students</div>',
             unsafe_allow_html=True)
