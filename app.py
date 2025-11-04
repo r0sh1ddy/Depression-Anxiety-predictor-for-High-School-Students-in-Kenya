@@ -3,10 +3,6 @@ import pandas as pd
 import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import uuid
-import base64
-from PIL import Image
-import io
 
 # ----------------------------------------------------------------------
 #  Page config & CSS
@@ -15,143 +11,15 @@ st.set_page_config(
     page_title="Mental Health Screening - Kenya",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🧠"
+    page_icon="brain"
 )
 
-# ----------------------------------------------------------------------
-#  Initialize Session State
-# ----------------------------------------------------------------------
-if 'anonymous_id' not in st.session_state:
-    st.session_state.anonymous_id = str(uuid.uuid4())[:8]
-
-if 'card_bg_mode' not in st.session_state:
-    st.session_state.card_bg_mode = "Default"
-
-if 'uploaded_card_bg' not in st.session_state:
-    st.session_state.uploaded_card_bg = None
-
-# ----------------------------------------------------------------------
-#  Background Image Functions
-# ----------------------------------------------------------------------
-def get_base64_image(image_source):
-    """Convert image to base64"""
-    try:
-        if isinstance(image_source, str):  # File path
-            with open(image_source, "rb") as f:
-                return base64.b64encode(f.read()).decode()
-        else:  # Uploaded file
-            return base64.b64encode(image_source.read()).decode()
-    except:
-        return None
-
-def add_main_bg_from_local(image_file):
-    """Add background image from local folder for main page"""
-    try:
-        with open(image_file, "rb") as f:
-            data = base64.b64encode(f.read()).decode()
-        st.markdown(
-            f"""
-            <style>
-            .stApp {{
-                background-image: url("data:image/png;base64,{data}");
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-attachment: fixed;
-            }}
-            .stApp > header {{
-                background-color: transparent;
-            }}
-            .main .block-container {{
-                background-color: rgba(255, 255, 255, 0.95);
-                padding: 2rem;
-                border-radius: 10px;
-                margin-top: 2rem;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-    except FileNotFoundError:
-        st.warning(f"Background image not found: {image_file}")
-
-def get_card_background_style(mode, device_choice=None, uploaded_img=None):
-    """Generate CSS for assessment card backgrounds"""
-    
-    # Device/Pattern backgrounds
-    device_patterns = {
-        "Gradient Blue": "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);",
-        "Gradient Purple": "background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);",
-        "Gradient Green": "background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);",
-        "Gradient Orange": "background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);",
-        "Gradient Teal": "background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);",
-        "Mental Health Theme": "background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);",
-        "Calm Nature": "background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);",
-        "Sunset": "background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);",
-        "Ocean Blue": "background: linear-gradient(135deg, #2e3192 0%, #1bffff 100%);",
-        "Forest Green": "background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);",
-    }
-    
-    if mode == "Default":
-        return "background-color: white;"
-    
-    elif mode == "Device Pattern" and device_choice:
-        return device_patterns.get(device_choice, "background-color: white;")
-    
-    elif mode == "Upload Image" and uploaded_img:
-        img_data = get_base64_image(uploaded_img)
-        if img_data:
-            return f"""
-                background-image: url("data:image/png;base64,{img_data}");
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-            """
-    
-    return "background-color: white;"
-
-# ----------------------------------------------------------------------
-#  Apply Main Background Image
-# ----------------------------------------------------------------------
-BASE = os.path.dirname(__file__)
-BACKGROUND_PATH = os.path.join(BASE, "images", "background.jpg")
-
-if os.path.exists(BACKGROUND_PATH):
-    add_main_bg_from_local(BACKGROUND_PATH)
-
-# ----------------------------------------------------------------------
-#  Enhanced CSS
-# ----------------------------------------------------------------------
 st.markdown("""
 <style>
     .main-header {font-size:2.5rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:1rem;}
     .sub-header {font-size:1.2rem;color:#555;text-align:center;margin-bottom:2rem;}
-    .score-card {
-        padding:2rem;
-        border-radius:15px;
-        text-align:center;
-        margin:1rem 0;
-        box-shadow:0 8px 16px rgba(0,0,0,0.2);
-        position: relative;
-        overflow: hidden;
-    }
-    .score-card-content {
-        position: relative;
-        z-index: 1;
-    }
-    .score-card.with-bg-image h3,
-    .score-card.with-bg-image .score-number,
-    .score-card.with-bg-image .score-label,
-    .score-card.with-bg-image .stMarkdown {
-        color: white !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-    }
-    .score-card.with-gradient h3,
-    .score-card.with-gradient .score-number,
-    .score-card.with-gradient .score-label,
-    .score-card.with-gradient .stMarkdown {
-        color: white !important;
-    }
+    .score-card {padding:2rem;border-radius:15px;text-align:center;margin:1rem 0;
+                 box-shadow:0 4px 6px rgba(0,0,0,0.1);}
     .score-number {font-size:4rem;font-weight:bold;margin:0.5rem 0;}
     .score-label {font-size:1.2rem;font-weight:600;}
     .best-model-card {background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
@@ -160,35 +28,13 @@ st.markdown("""
                       font-size:1.2rem;padding:0.75rem;border-radius:10px;
                       border:none;font-weight:bold;}
     .stButton>button:hover {background-color:#155a8a;transform:scale(1.02);}
-    .anonymous-id-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin: 1rem 0;
-        font-weight: bold;
-    }
-    .restart-button button {
-        background-color: #ff4b4b !important;
-        width: 100%;
-    }
-    .restart-button button:hover {
-        background-color: #cc0000 !important;
-    }
-    .bg-settings-card {
-        background: #f0f2f6;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        border: 2px solid #e0e0e0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
 #  Header
 # ----------------------------------------------------------------------
+BASE = os.path.dirname(__file__)
 LOGO_PATH = os.path.join(BASE, "images", "logo.png")
 
 if os.path.exists(LOGO_PATH):
@@ -200,15 +46,6 @@ else:
 
 st.markdown('<div class="sub-header">Depression & Anxiety Screening for Kenyan High School Students</div>',
             unsafe_allow_html=True)
-
-# ----------------------------------------------------------------------
-#  Anonymous ID Display
-# ----------------------------------------------------------------------
-st.markdown(f"""
-<div class="anonymous-id-box">
-    🔐 Anonymous Session ID: {st.session_state.anonymous_id}
-</div>
-""", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
 #  Load models
@@ -232,82 +69,6 @@ if os.path.exists(METRICS_FILE):
 # ----------------------------------------------------------------------
 with st.sidebar:
     st.title("Settings")
-    
-    # Restart Button at the top
-    st.markdown("### Session Control")
-    col_r1, col_r2 = st.columns([3, 1])
-    with col_r1:
-        st.markdown(f"**ID:** `{st.session_state.anonymous_id}`")
-    with col_r2:
-        if st.button("🔄", help="Restart Session", key="restart_btn"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Assessment Card Background Settings
-    st.markdown("### 🎨 Assessment Card Style")
-    with st.expander("Customize Card Backgrounds", expanded=False):
-        st.markdown('<div class="bg-settings-card">', unsafe_allow_html=True)
-        
-        card_bg_mode = st.selectbox(
-            "Background Mode:",
-            ["Default", "Device Pattern", "Upload Image"],
-            key="card_bg_selector"
-        )
-        
-        st.session_state.card_bg_mode = card_bg_mode
-        
-        if card_bg_mode == "Device Pattern":
-            device_choice = st.selectbox(
-                "Choose Pattern:",
-                [
-                    "Gradient Blue",
-                    "Gradient Purple", 
-                    "Gradient Green",
-                    "Gradient Orange",
-                    "Gradient Teal",
-                    "Mental Health Theme",
-                    "Calm Nature",
-                    "Sunset",
-                    "Ocean Blue",
-                    "Forest Green"
-                ],
-                key="device_pattern"
-            )
-            st.session_state.device_pattern = device_choice
-            
-            # Preview
-            st.markdown("**Preview:**")
-            preview_style = get_card_background_style("Device Pattern", device_choice)
-            st.markdown(f"""
-            <div style="{preview_style} padding:1rem; border-radius:8px; text-align:center; color:white;">
-                <strong>Sample Card</strong>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        elif card_bg_mode == "Upload Image":
-            uploaded_file = st.file_uploader(
-                "Upload Background Image",
-                type=['png', 'jpg', 'jpeg', 'gif'],
-                key="card_bg_upload"
-            )
-            
-            if uploaded_file:
-                st.session_state.uploaded_card_bg = uploaded_file
-                st.success("✅ Image uploaded!")
-                
-                # Show preview
-                image = Image.open(uploaded_file)
-                st.image(image, caption="Uploaded Background", use_container_width=True)
-            else:
-                st.info("📤 Upload an image to customize card backgrounds")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
     selection_mode = st.radio(
         "Model Selection:",
         ["Auto-Select Best", "Manual Selection", "View All Models"]
@@ -450,202 +211,6 @@ with tab2:
                                                format_func=lambda x: likert[x],
                                                label_visibility="collapsed")
         st.markdown("---")
-        
-        # --- Combined Risk Assessment Summary ---
-        st.markdown("## 📋 Overall Risk Assessment")
-        
-        # Determine overall risk level
-        dep_clinical_risk = "High" if phq_total >= 15 else "Moderate" if phq_total >= 10 else "Low"
-        anx_clinical_risk = "High" if gad_total >= 15 else "Moderate" if gad_total >= 10 else "Low"
-        dep_model_risk = "At Risk" if dep_pred == 1 else "Not At Risk"
-        anx_model_risk = "At Risk" if anx_pred == 1 else "Not At Risk"
-        
-        col_summary1, col_summary2, col_summary3 = st.columns(3)
-        
-        with col_summary1:
-            st.markdown("### 🎯 Depression Summary")
-            st.markdown(f"""
-            - **Clinical Risk:** {dep_clinical_risk}
-            - **AI Assessment:** {dep_model_risk}
-            - **Score:** {phq_total}/24
-            - **Severity:** {dep_cat}
-            """)
-            
-        with col_summary2:
-            st.markdown("### 🎯 Anxiety Summary")
-            st.markdown(f"""
-            - **Clinical Risk:** {anx_clinical_risk}
-            - **AI Assessment:** {anx_model_risk}
-            - **Score:** {gad_total}/21
-            - **Severity:** {anx_cat}
-            """)
-        
-        with col_summary3:
-            st.markdown("### 🎯 Action Required")
-            
-            # Determine highest priority action
-            max_score = max(phq_total, (gad_total * 24/21))  # Normalize GAD to PHQ scale
-            
-            if max_score >= 15 or (dep_pred == 1 and anx_pred == 1):
-                st.error("🚨 **Immediate Action**")
-                st.markdown("Seek professional mental health support **soon**")
-            elif max_score >= 10 or dep_pred == 1 or anx_pred == 1:
-                st.warning("⚠️ **Professional Consultation**")
-                st.markdown("Schedule appointment with counselor")
-            elif max_score >= 5:
-                st.info("ℹ️ **Monitor & Self-Care**")
-                st.markdown("Practice wellness strategies, monitor symptoms")
-            else:
-                st.success("✅ **Continue Healthy Habits**")
-                st.markdown("Maintain current mental health practices")
-        
-        # Detailed action plan
-        st.markdown("---")
-        st.markdown("## 🗓️ Recommended Action Plan")
-        
-        action_col1, action_col2 = st.columns(2)
-        
-        with action_col1:
-            st.markdown("### Immediate Steps (This Week)")
-            
-            immediate_actions = []
-            
-            if phq_total >= 15 or gad_total >= 15:
-                immediate_actions.extend([
-                    "📞 Contact school counselor or mental health professional",
-                    "🗣️ Talk to trusted adult about how you're feeling",
-                    "📝 Keep crisis hotline numbers readily available"
-                ])
-            elif phq_total >= 10 or gad_total >= 10:
-                immediate_actions.extend([
-                    "📅 Schedule appointment with school counselor",
-                    "💬 Discuss feelings with trusted friend or family member",
-                    "📖 Learn about depression/anxiety resources"
-                ])
-            elif phq_total >= 5 or gad_total >= 5:
-                immediate_actions.extend([
-                    "🧘 Start daily relaxation or mindfulness practice",
-                    "📊 Monitor your mood and symptoms",
-                    "🤝 Reach out to social support network"
-                ])
-            else:
-                immediate_actions.extend([
-                    "✅ Continue current healthy habits",
-                    "💪 Maintain regular exercise routine",
-                    "😴 Keep consistent sleep schedule"
-                ])
-            
-            for action in immediate_actions:
-                st.markdown(f"- {action}")
-        
-        with action_col2:
-            st.markdown("### Ongoing Strategies")
-            
-            ongoing_actions = [
-                "🏃 Regular physical activity (30 min/day)",
-                "😴 Maintain sleep hygiene (7-9 hours)",
-                "🥗 Balanced nutrition and hydration",
-                "📱 Limit social media if it causes stress",
-                "🎨 Engage in enjoyable activities",
-                "📚 Academic stress management",
-                "👥 Maintain social connections"
-            ]
-            
-            for action in ongoing_actions:
-                st.markdown(f"- {action}")
-
-        st.markdown("---")
-
-        # --- Real-time Performance Metrics Explanation ---
-        with st.expander("📊 Understanding Model Performance & Your Results", expanded=False):
-            st.markdown("""
-            ### How to Read Your Results
-            
-            Your screening provides **three types of information**:
-            
-            1️⃣ **Clinical Score (PHQ-8 / GAD-7)**
-            - Based on validated medical questionnaires
-            - Uses standard cutoff scores
-            - Most reliable for interpretation
-            
-            2️⃣ **AI Model Prediction**
-            - Machine learning analysis of your responses
-            - Considers patterns across all your answers
-            - May catch risk not obvious from score alone
-            
-            3️⃣ **Confidence Metrics**
-            - How certain the AI model is about its prediction
-            - Higher confidence = more reliable prediction
-            
-            ### What If Results Don't Match?
-            
-            **Score says "At Risk" but Model says "Not At Risk":**
-            - Trust the clinical score more
-            - The validated questionnaire is the gold standard
-            - Seek professional evaluation
-            
-            **Model says "At Risk" but Score is low:**
-            - AI detected subtle patterns in your responses
-            - Worth discussing with a counselor
-            - Your specific combination of symptoms may indicate risk
-            
-            ### Metrics Explanation
-            
-            **Stored Test Set Metrics:**
-            - These are the model's performance on historical test data
-            - Show how well the model performed during validation
-            - Used to select the best model
-            
-            **Real-time Prediction Confidence:**
-            - Calculated specifically for YOUR input
-            - Shows model certainty about this particular prediction
-            - Higher confidence = model is more certain about the prediction
-            
-            **Probability Score:**
-            - The model's estimated probability that the condition is present
-            - Values closer to 100% indicate higher likelihood
-            - Values closer to 0% indicate lower likelihood
-            """)
-            
-            if dep_confidence is not None or anx_confidence is not None:
-                st.markdown("### Your Current Prediction Summary")
-                col_m1, col_m2 = st.columns(2)
-                
-                with col_m1:
-                    if dep_confidence is not None:
-                        st.markdown("**Depression:**")
-                        st.markdown(f"- Clinical Score: `{phq_total}/24` ({dep_cat})")
-                        st.markdown(f"- AI Prediction: `{dep_pred}` ({'At Risk' if dep_pred == 1 else 'Not At Risk'})")
-                        st.markdown(f"- AI Confidence: `{dep_confidence:.1%}`")
-                        st.markdown(f"- Risk Probability: `{dep_proba_class_1:.1%}`")
-                        st.markdown(f"- Model Test Recall: `{dep_rec_stored:.1%}`")
-                        
-                        # Agreement indicator
-                        clinical_risk = phq_total >= 10
-                        model_risk = dep_pred == 1
-                        if clinical_risk == model_risk:
-                            st.success("✅ Clinical score and AI model agree")
-                        else:
-                            st.warning("⚠️ Clinical score and AI model disagree - see interpretation guide above")
-                
-                with col_m2:
-                    if anx_confidence is not None:
-                        st.markdown("**Anxiety:**")
-                        st.markdown(f"- Clinical Score: `{gad_total}/21` ({anx_cat})")
-                        st.markdown(f"- AI Prediction: `{anx_pred}` ({'At Risk' if anx_pred == 1 else 'Not At Risk'})")
-                        st.markdown(f"- AI Confidence: `{anx_confidence:.1%}`")
-                        st.markdown(f"- Risk Probability: `{anx_proba_class_1:.1%}`")
-                        st.markdown(f"- Model Test Recall: `{anx_rec_stored:.1%}`")
-                        
-                        # Agreement indicator
-                        clinical_risk = gad_total >= 10
-                        model_risk = anx_pred == 1
-                        if clinical_risk == model_risk:
-                            st.success("✅ Clinical score and AI model agree")
-                        else:
-                            st.warning("⚠️ Clinical score and AI model disagree - see interpretation guide above")
-
-        st.markdown("---")
     phq_total = sum(phq.values())
     st.markdown(f"### PHQ-8 Score: **{phq_total}** / 24")
 
@@ -754,8 +319,7 @@ if submitted:
             "Mothers_Education": edu_map.get(mothers_edu, 0),
             "Co_Curricular": 1 if co_curr == "Yes" else 0,
             "Sports": 1 if sports == "Yes" else 0,
-            "Percieved_Academic_Abilities": int(acad_ability),
-            "Anonymous_ID": st.session_state.anonymous_id
+            "Percieved_Academic_Abilities": int(acad_ability)
         }
         input_data.update(phq)
         input_data.update(gad)
@@ -785,182 +349,105 @@ if submitted:
         dep_pred = all_preds.get(best_dep_model, {}).get('dep', 'N/A')
         anx_pred = all_preds.get(best_anx_model, {}).get('anx', 'N/A')
 
-        # --- Compute real-time confidence scores ---
-        dep_confidence = None
-        anx_confidence = None
-        dep_proba_class_1 = None
-        anx_proba_class_1 = None
-        
-        if best_dep_model and pipelines.get(best_dep_model):
-            try:
-                dep_proba = pipelines[best_dep_model].predict_proba(user_df)[0]
-                # Get probability for the predicted class
-                if len(dep_proba) > 1:
-                    dep_proba_class_1 = dep_proba[1] if len(dep_proba[0].shape) == 0 else dep_proba[0][1]
-                    dep_confidence = dep_proba_class_1 if dep_pred == 1 else (1 - dep_proba_class_1)
-                else:
-                    dep_proba_class_1 = dep_proba[0]
-                    dep_confidence = dep_proba_class_1 if dep_pred == 1 else (1 - dep_proba_class_1)
-            except Exception as e:
-                st.warning(f"Could not compute depression confidence: {e}")
-        
-        if best_anx_model and pipelines.get(best_anx_model):
-            try:
-                anx_proba = pipelines[best_anx_model].predict_proba(user_df)[0]
-                # For multi-output models, get the anxiety target (index 1)
-                if best_dep_model == best_anx_model:
-                    # Same model for both, anxiety is second output
-                    if len(anx_proba) > 1:
-                        anx_proba_class_1 = anx_proba[1] if len(anx_proba[1].shape) == 0 else anx_proba[1][1]
-                        anx_confidence = anx_proba_class_1 if anx_pred == 1 else (1 - anx_proba_class_1)
-                else:
-                    # Different model
-                    if len(anx_proba) > 1:
-                        anx_proba_class_1 = anx_proba[1] if len(anx_proba[0].shape) == 0 else anx_proba[0][1]
-                        anx_confidence = anx_proba_class_1 if anx_pred == 1 else (1 - anx_proba_class_1)
-                    else:
-                        anx_proba_class_1 = anx_proba[0]
-                        anx_confidence = anx_proba_class_1 if anx_pred == 1 else (1 - anx_proba_class_1)
-            except Exception as e:
-                st.warning(f"Could not compute anxiety confidence: {e}")
-        
-        # Get stored metrics for reference
-        dep_rec_stored = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
-        dep_acc_stored = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
-        anx_rec_stored = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
-        anx_acc_stored = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+        dep_rec = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
+        dep_acc = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+        anx_rec = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
+        anx_acc = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
 
         # --- Severity categories (standardized) ---
         dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
         anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
 
-        # --- Get card styling based on user selection ---
-        card_style = get_card_background_style(
-            st.session_state.card_bg_mode,
-            st.session_state.get('device_pattern'),
-            st.session_state.get('uploaded_card_bg')
-        )
-        
-        # Determine if we need special text styling
-        card_class = ""
-        if st.session_state.card_bg_mode == "Device Pattern":
-            card_class = "with-gradient"
-        elif st.session_state.card_bg_mode == "Upload Image":
-            card_class = "with-bg-image"
-
         # --- Results --
         st.markdown("---")
         st.markdown("## Screening Results")
-        st.markdown(f"**Session ID:** `{st.session_state.anonymous_id}`")
 
         c1, c2 = st.columns(2)
         with c1:
             st.info(f"**Depression Model:** {best_dep_model or 'N/A'}")
             if best_dep_model:
-                st.caption(f"Test Set - Recall: {dep_rec_stored:.1%} | Accuracy: {dep_acc_stored:.1%}")
-                if dep_confidence is not None:
-                    st.metric(
-                        label="Current Prediction Confidence",
-                        value=f"{dep_confidence:.1%}",
-                        help="Real-time confidence for this specific prediction"
-                    )
+                st.caption(f"Recall: {dep_rec:.1%} | Accuracy: {dep_acc:.1%}")
         with c2:
             st.info(f"**Anxiety Model:** {best_anx_model or 'N/A'}")
             if best_anx_model:
-                st.caption(f"Test Set - Recall: {anx_rec_stored:.1%} | Accuracy: {anx_acc_stored:.1%}")
-                if anx_confidence is not None:
-                    st.metric(
-                        label="Current Prediction Confidence",
-                        value=f"{anx_confidence:.1%}",
-                        help="Real-time confidence for this specific prediction"
-                    )
+                st.caption(f"Recall: {anx_rec:.1%} | Accuracy: {anx_acc:.1%}")
         st.markdown("---")
 
-                col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"""
-            <div class="score-card {card_class}" style="{card_style} border-left:5px solid #1f77b4">
-                <div class="score-card-content">
-                    <h3 style="margin:0;">PHQ-8 Depression Assessment</h3>
-                    <div class="score-number">{phq_total}<span style="font-size:2rem;opacity:0.7">/24</span></div>
-                    <div class="score-label">{dep_cat}</div>
-                </div>
+            <div class="score-card" style="border-left:5px solid #1f77b4">
+                <h3 style="margin:0;color:#1f77b4">PHQ-8</h3>
+                <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+                <div class="score-label">{dep_cat}</div>
             </div>
             """, unsafe_allow_html=True)
-            
-            # Severity interpretation
-            if phq_total < 5:
-                st.info("✅ **Minimal Depression**: Symptoms are minimal. Continue healthy habits.")
-            elif phq_total < 10:
-                st.warning("⚠️ **Mild Depression**: Watchful waiting. Consider support if worsens.")
-            elif phq_total < 15:
-                st.warning("⚠️ **Moderate Depression**: Treatment should be considered (counseling, medication).")
-            elif phq_total < 20:
-                st.error("🚨 **Moderately Severe**: Active treatment with counseling and/or medication recommended.")
-            else:
-                st.error("🚨 **Severe Depression**: Immediate treatment strongly recommended. Seek professional help urgently.")
-            
-            # Model prediction details
             if best_dep_model:
-                pred_label = "⚠️ At Risk" if dep_pred == 1 else "✅ Not At Risk"
-                st.markdown(f"**Model Prediction:** {pred_label}")
-                
-                if dep_confidence is not None:
-                    st.progress(dep_confidence)
-                    st.caption(f"Prediction confidence: {dep_confidence:.1%}")
-                if dep_proba_class_1 is not None:
-                    st.caption(f"Probability of Depression: {dep_proba_class_1:.1%}")
-                
-                # Interpretation guidance
-                with st.expander("📖 Understanding Your Depression Results"):
-                    st.markdown(f"""
-                    ### Score Breakdown
-                    - **Your Score:** {phq_total}/24
-                    - **Severity Level:** {dep_cat}
-                    - **Model Says:** {pred_label}
-                    
-                    ### What This Means
-                    The PHQ-8 measures depression symptoms over the past 2 weeks. Each question is scored 0-3:
-                    - **0-4:** Minimal symptoms
-                    - **5-9:** Mild symptoms
-                    - **10-14:** Moderate symptoms
-                    - **15-19:** Moderately severe symptoms
-                    - **20-24:** Severe symptoms
-                    
-                    ### Your Highest Scoring Items
-                    """)
-                    
-                    # Show top 3 PHQ symptoms
-                    phq_items = {
-                        'PHQ_1': 'Little interest or pleasure',
-                        'PHQ_2': 'Feeling down/depressed',
-                        'PHQ_3': 'Sleep problems',
-                        'PHQ_4': 'Feeling tired/low energy',
-                        'PHQ_5': 'Appetite issues',
-                        'PHQ_6': 'Feeling bad about self',
-                        'PHQ_7': 'Trouble concentrating',
-                        'PHQ_8': 'Moving/speaking slowly or fidgety'
-                    }
-                    
-                    sorted_phq = sorted(phq.items(), key=lambda x: x[1], reverse=True)[:3]
-                    for item, score in sorted_phq:
-                        if score > 0:
-                            st.markdown(f"- **{phq_items.get(item, item)}**: {likert[score]} ({score}/3)")
-                    
-                    st.markdown("""
-                    ### Next Steps
-                    """)
-                    
-                    if phq_total < 5:
-                        st.success("Continue monitoring your mental health. Maintain healthy sleep, exercise, and social connections.")
-                    elif phq_total < 10:
-                        st.info("Consider talking to a trusted friend, family member, or school counselor about how you're feeling.")
-                    elif phq_total < 15:
-                        st.warning("Schedule an appointment with a mental health professional or school counselor for evaluation.")
-                    else:
-                        st.error("Seek professional help soon. Contact a mental health professional or use crisis resources if needed.")
-                    
-                    if dep_pred == 1 and phq_total < 10:
-                        st.info("💡 **Note:** The AI model predicts risk even though your score is in the mild range. This may be due to your specific response pattern. Consider professional evaluation.")
-                    elif dep_pred == 0 and phq_total >= 10:
-                        st.warning("💡 **Note:** Your score suggests moderate symptoms, though the AI model prediction is lower risk. The score-based interpretation is more reliable. Seek professional guidance.")
+                st.markdown(f"**Model Prediction:** `{dep_pred}`")
+
+        with col2:
+            st.markdown(f"""
+            <div class="score-card" style="border-left:5px solid #ff7f0e">
+                <h3 style="margin:0;color:#ff7f0e">GAD-7</h3>
+                <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+                <div class="score-label">{anx_cat}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if best_anx_model:
+                st.markdown(f"**Model Prediction:** `{anx_pred}`")
+
+        # --- SHAP ---
+        st.markdown("---")
+        st.markdown("### Model Explanations")
+        tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
+        with tab_d:
+            if best_dep_model and pipelines.get(best_dep_model):
+                generate_shap_plot(pipelines[best_dep_model], user_df,
+                                   target_idx=0, title="Depression Risk Factors")
+            else:
+                st.info("No model available.")
+        with tab_a:
+            if best_anx_model and pipelines.get(best_anx_model):
+                generate_shap_plot(pipelines[best_anx_model], user_df,
+                                   target_idx=0 if best_dep_model != best_anx_model else 1,
+                                   title="Anxiety Risk Factors")
+            else:
+                st.info("No model available.")
+
+        # --- Crisis Alert ---
+        if phq_total >= 15 or gad_total >= 15:
+            st.markdown("---")
+            st.error("### High Score Detected")
+            st.markdown("""
+            **Immediate support is recommended.**
+            - **Kenya Red Cross:** 1199  
+            - **Befrienders Kenya:** +254 722 178 177  
+            - **School Counselor**
+            """)
+
+        # --- Download ---
+        st.markdown("---")
+        report = f"""
+SCREENING RESULTS
+Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
+
+PHQ-8 Score: {phq_total}/24 → {dep_cat}
+GAD-7 Score: {gad_total}/21 → {anx_cat}
+
+Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred}
+Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred}
+
+This is a screening tool only. Not a diagnosis.
+        """
+        st.download_button("Download Results", report,
+                           file_name=f"screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt",
+                           mime="text/plain")
+
+        # --- Disclaimer ---
+        st.markdown("---")
+        st.warning("""
+        **SCREENING ONLY**  
+        This tool uses PHQ-8 and GAD-7 for screening.  
+        Results are **not a diagnosis**.  
+        High scores indicate need for professional evaluation.
+        """)
