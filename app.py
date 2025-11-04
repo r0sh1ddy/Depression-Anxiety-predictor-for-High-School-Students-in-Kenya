@@ -4,9 +4,69 @@ import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-# ----------------------------------------------------------------------
-#  Page config & CSS
-# ----------------------------------------------------------------------
+TEST_DATA_FILE = os.path.join(BASE, "test_data.pkl")  # or "test_data.csv"
+
+test_data = None
+if os.path.exists(TEST_DATA_FILE):
+    try:
+        if TEST_DATA_FILE.endswith('.pkl'):
+            with open(TEST_DATA_FILE, "rb") as f:
+                test_data = pickle.load(f)
+        else:  # CSV
+            test_data = pd.read_csv(TEST_DATA_FILE)
+        st.sidebar.success(f"✅ Test data loaded: {len(test_data)} samples")
+    except Exception as e:
+        st.sidebar.error(f"❌ Test data load failed: {e}")
+else:
+    st.sidebar.warning("⚠️ No test data found - using stored metrics")
+
+
+# Add this function to calculate real-time metrics
+def calculate_live_metrics(model, X_test, y_test, target_idx):
+    """
+    Calculate real-time recall and accuracy for a specific target
+    
+    Args:
+        model: trained pipeline
+        X_test: test features
+        y_test: test labels (can be 1D or 2D array)
+        target_idx: 0 for depression, 1 for anxiety
+    
+    Returns:
+        dict with recall and accuracy
+    """
+    from sklearn.metrics import recall_score, accuracy_score
+    
+    try:
+        # Get predictions
+        y_pred = model.predict(X_test)
+        
+        # Handle multi-output vs single output
+        if len(y_pred.shape) > 1:
+            y_pred_target = y_pred[:, target_idx]
+        else:
+            y_pred_target = y_pred
+            
+        # Handle multi-output ground truth
+        if len(y_test.shape) > 1:
+            y_test_target = y_test[:, target_idx]
+        else:
+            y_test_target = y_test
+        
+        # Calculate metrics
+        recall = recall_score(y_test_target, y_pred_target, zero_division=0)
+        accuracy = accuracy_score(y_test_target, y_pred_target)
+        
+        return {
+            'recall': recall,
+            'accuracy': accuracy,
+            'samples': len(y_test_target)
+        }
+    except Exception as e:
+        st.warning(f"Metric calculation error: {e}")
+        return {'recall': 0, 'accuracy': 0, 'samples': 0}
+
+#  Page config 
 icon_path = "app_images/icon.jpg"
 logo_path = "app_images/icon.jpg"
 
@@ -28,10 +88,7 @@ if 'results' not in st.session_state:
 if 'custom_bg_image' not in st.session_state:
     st.session_state.custom_bg_image = None
 
-
-# ----------------------------------------------------------------------
-# Dynamic Background CSS (supports uploaded image)
-# ----------------------------------------------------------------------
+# Dynamic Background CSS 
 def get_background_css():
     if (st.session_state.background_style == "uploaded_image"
             and st.session_state.get("custom_bg_image")):
@@ -623,7 +680,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 #  Process Submission
 # ----------------------------------------------------------------------
 if submitted:
-    with st.spinner("Processing..."):
+    with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
         edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
         input_data = {
@@ -647,100 +704,289 @@ if submitted:
         input_data.update(gad)
         user_df = pd.DataFrame([input_data])
 
-        # --- Predictions ---
-        all_preds = {}
-        for name, pipe in pipelines.items():
+        # --- Prepare test data if available ---
+        use_live_metrics = test_data is not None
+        
+        if use_live_metrics:
+            # Separate features and labels from test data
+            # Adjust these column names based on your actual test data structure
+            target_cols = ['Is_Depressed', 'Has_anxiety']
+            feature_cols = [col for col in test_data.columns if col not in target_cols]
+            
+            X_test = test_data[feature_cols]
+            y_test = test_data[target_cols].values  # Convert to numpy array
+
+        # --- LIVE PREDICTIONS from all models ---
+        st.markdown("---")
+        st.markdown("## Live Model Predictions & Real-time Metrics")
+        
+        if use_live_metrics:
+            st.success(f"Computing live metrics on {len(test_data)} test samples")
+        else:
+            st.info("ℹUsing pre-computed metrics (no test data available)")
+        
+        live_results = []
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for idx, (model_name, pipe) in enumerate(pipelines.items()):
+            status_text.text(f"Processing {model_name}...")
+            progress_bar.progress((idx + 1) / len(pipelines))
+            
             try:
-                p = pipe.predict(user_df)[0]
-                all_preds[name] = {'dep': p[0], 'anx': p[1] if len(p) > 1 else None}
-            except:
-                all_preds[name] = {'dep': None, 'anx': None}
-
-        # --- Select models ---
-        best_dep_model = max(model_metrics.items(),
-                             key=lambda x: x[1].get('test_recall_per_target',{}).get('Is_Depressed',0))[0] \
-                         if model_metrics else None
-        best_anx_model = max(model_metrics.items(),
-                             key=lambda x: x[1].get('test_recall_per_target',{}).get('Has_anxiety',0))[0] \
-                         if model_metrics else None
-
-        dep_pred = all_preds.get(best_dep_model, {}).get('dep', 'N/A')
-        anx_pred = all_preds.get(best_anx_model, {}).get('anx', 'N/A')
-
-        dep_rec = model_metrics.get(best_dep_model, {}).get('test_recall_per_target', {}).get('Is_Depressed', 0)
-        dep_acc = model_metrics.get(best_dep_model, {}).get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
-        anx_rec = model_metrics.get(best_anx_model, {}).get('test_recall_per_target', {}).get('Has_anxiety', 0)
-        anx_acc = model_metrics.get(best_anx_model, {}).get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
-
-        # --- Severity categories (standardized) ---
-        dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
-        anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
-
-        # --- Results --
+                # Get live prediction for user
+                prediction = pipe.predict(user_df)[0]
+                
+                # Get probability scores if available
+                try:
+                    proba = pipe.predict_proba(user_df)[0]
+                    dep_proba = proba[0][1] if len(proba[0]) > 1 else None
+                    anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
+                except:
+                    dep_proba = None
+                    anx_proba = None
+                
+                # Calculate LIVE metrics if test data available
+                if use_live_metrics:
+                    dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0)
+                    anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1)
+                    
+                    dep_recall = dep_metrics['recall']
+                    dep_accuracy = dep_metrics['accuracy']
+                    anx_recall = anx_metrics['recall']
+                    anx_accuracy = anx_metrics['accuracy']
+                    metric_source = "LIVE"
+                else:
+                    # Fallback to stored metrics
+                    metrics = model_metrics.get(model_name, {})
+                    dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
+                    dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+                    anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
+                    anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+                    metric_source = "STORED"
+                
+                # Store results
+                live_results.append({
+                    'model_name': model_name,
+                    'dep_prediction': int(prediction[0]),
+                    'anx_prediction': int(prediction[1]) if len(prediction) > 1 else None,
+                    'dep_probability': dep_proba,
+                    'anx_probability': anx_proba,
+                    'dep_recall': dep_recall,
+                    'dep_accuracy': dep_accuracy,
+                    'anx_recall': anx_recall,
+                    'anx_accuracy': anx_accuracy,
+                    'metric_source': metric_source
+                })
+                
+            except Exception as e:
+                st.warning(f"Model {model_name} failed: {str(e)}")
+                continue
+        
+        progress_bar.empty()
+        status_text.empty()
+        
+        if not live_results:
+            st.error("No models could generate predictions. Please check your model files.")
+            st.stop()
+        
+        # --- SELECT BEST MODELS based on HIGHEST RECALL ---
+        best_dep = max(live_results, key=lambda x: x['dep_recall'])
+        best_anx = max(live_results, key=lambda x: x['anx_recall'])
+        
+        st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0]['metric_source']}")
+        
+        # --- DISPLAY BEST MODEL SELECTIONS ---
         st.markdown("---")
-        st.markdown("## Screening Results")
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.info(f"**Depression Model:** {best_dep_model or 'N/A'}")
-            if best_dep_model:
-                st.caption(f"Recall: {dep_rec:.1%} | Accuracy: {dep_acc:.1%}")
-        with c2:
-            st.info(f"**Anxiety Model:** {best_anx_model or 'N/A'}")
-            if best_anx_model:
-                st.caption(f"Recall: {anx_rec:.1%} | Accuracy: {anx_acc:.1%}")
-        st.markdown("---")
-
+        st.markdown("## Selected Best Models (Highest Recall)")
+        
         col1, col2 = st.columns(2)
+        
         with col1:
             st.markdown(f"""
-            <div class="score-card" style="border-left:5px solid #1f77b4">
-                <h3 style="margin:0;color:#1f77b4">PHQ-8</h3>
-                <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
-                <div class="score-label">{dep_cat}</div>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0; color: white;">🧠 Depression Model</h3>
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                        {best_dep['metric_source']}
+                    </span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
+                <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
+                    {best_dep['model_name']}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep['dep_recall']:.1%}</div>
+                    </div>
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep['dep_accuracy']:.1%}</div>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            if best_dep_model:
-                st.markdown(f"**Model Prediction:** `{dep_pred}`")
-
+        
         with col2:
             st.markdown(f"""
-            <div class="score-card" style="border-left:5px solid #ff7f0e">
-                <h3 style="margin:0;color:#ff7f0e">GAD-7</h3>
-                <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
-                <div class="score-label">{anx_cat}</div>
+            <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+                        padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0; color: white;">😰 Anxiety Model</h3>
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                        {best_anx['metric_source']}
+                    </span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
+                <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
+                    {best_anx['model_name']}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx['anx_recall']:.1%}</div>
+                    </div>
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx['anx_accuracy']:.1%}</div>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            if best_anx_model:
-                st.markdown(f"**Model Prediction:** `{anx_pred}`")
-
-        # --- SHAP ---
+        
+        # --- LIVE PREDICTION RESULTS ---
         st.markdown("---")
-        st.markdown("### Model Explanations")
-        tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
+        st.markdown("## Your Screening Results")
+        
+        # Severity categories
+        dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
+        anx_cat = "Minimal" if gad_total < 5 else "Mild" if gad_total < 10 else "Moderate" if gad_total < 15 else "Severe"
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Depression Result
+            dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
+            dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
+            dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
+            
+            st.markdown(f"""
+            <div class="score-card" style="border-left:5px solid {dep_color}">
+                <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
+                <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+                <div class="score-label">{dep_cat}</div>
+                <hr style="margin: 1rem 0;">
+                <div style="font-size: 1.3rem; font-weight: bold; color: {dep_color}; margin: 0.5rem 0;">
+                    {dep_icon} {dep_risk}
+                </div>
+                <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
+                    <strong>Model:</strong> {best_dep['model_name'][:35]}{"..." if len(best_dep['model_name']) > 35 else ""}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if best_dep['dep_probability'] is not None:
+                st.metric("🎯 Risk Probability", f"{best_dep['dep_probability']:.1%}", 
+                         help="Model's confidence in this prediction")
+        
+        with col2:
+            # Anxiety Result
+            anx_risk = "POSITIVE (At Risk)" if best_anx['anx_prediction'] == 1 else "NEGATIVE (Low Risk)"
+            anx_color = "#e74c3c" if best_anx['anx_prediction'] == 1 else "#27ae60"
+            anx_icon = "🔴" if best_anx['anx_prediction'] == 1 else "🟢"
+            
+            st.markdown(f"""
+            <div class="score-card" style="border-left:5px solid {anx_color}">
+                <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
+                <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+                <div class="score-label">{anx_cat}</div>
+                <hr style="margin: 1rem 0;">
+                <div style="font-size: 1.3rem; font-weight: bold; color: {anx_color}; margin: 0.5rem 0;">
+                    {anx_icon} {anx_risk}
+                </div>
+                <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
+                    <strong>Model:</strong> {best_anx['model_name'][:35]}{"..." if len(best_anx['model_name']) > 35 else ""}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if best_anx['anx_probability'] is not None:
+                st.metric("Risk Probability", f"{best_anx['anx_probability']:.1%}",
+                         help="Model's confidence in this prediction")
+        
+        # --- ALL MODELS COMPARISON ---
+        st.markdown("---")
+        with st.expander("View All Model Predictions & Live Metrics", expanded=False):
+            st.markdown("### Depression Predictions")
+            dep_df = pd.DataFrame([{
+                'Model': r['model_name'],
+                'Prediction': '🔴 Positive' if r['dep_prediction'] == 1 else '🟢 Negative',
+                'Probability': f"{r['dep_probability']:.1%}" if r['dep_probability'] else 'N/A',
+                'Recall': f"{r['dep_recall']:.1%}",
+                'Accuracy': f"{r['dep_accuracy']:.1%}",
+                'Source': r['metric_source']
+            } for r in live_results])
+            st.dataframe(dep_df, use_container_width=True, hide_index=True)
+            
+            st.markdown("### Anxiety Predictions")
+            anx_df = pd.DataFrame([{
+                'Model': r['model_name'],
+                'Prediction': '🔴 Positive' if r['anx_prediction'] == 1 else '🟢 Negative',
+                'Probability': f"{r['anx_probability']:.1%}" if r['anx_probability'] else 'N/A',
+                'Recall': f"{r['anx_recall']:.1%}",
+                'Accuracy': f"{r['anx_accuracy']:.1%}",
+                'Source': r['metric_source']
+            } for r in live_results if r['anx_prediction'] is not None])
+            st.dataframe(anx_df, use_container_width=True, hide_index=True)
+        
+        # --- SHAP EXPLANATIONS ---
+        st.markdown("---")
+        st.markdown("## Model Explanations (SHAP Analysis)")
+        st.info("Understanding which factors influenced your risk assessment")
+        
+        tab_d, tab_a = st.tabs(["Depression Factors", "Anxiety Factors"])
+        
         with tab_d:
-            if best_dep_model and pipelines.get(best_dep_model):
-                generate_shap_plot(pipelines[best_dep_model], user_df,
-                                   target_idx=0, title="Depression Risk Factors")
+            if best_dep and pipelines.get(best_dep['model_name']):
+                generate_shap_plot(
+                    pipelines[best_dep['model_name']], 
+                    user_df,
+                    target_idx=0, 
+                    title=f"Depression Risk Factors - {best_dep['model_name']}"
+                )
             else:
-                st.info("No model available.")
+                st.info("No model available for SHAP analysis.")
+        
         with tab_a:
-            if best_anx_model and pipelines.get(best_anx_model):
-                generate_shap_plot(pipelines[best_anx_model], user_df,
-                                   target_idx=0 if best_dep_model != best_anx_model else 1,
-                                   title="Anxiety Risk Factors")
+            if best_anx and pipelines.get(best_anx['model_name']):
+                # Determine target index based on whether same model is used
+                target_idx = 0 if best_dep['model_name'] != best_anx['model_name'] else 1
+                generate_shap_plot(
+                    pipelines[best_anx['model_name']], 
+                    user_df,
+                    target_idx=target_idx, 
+                    title=f"Anxiety Risk Factors - {best_anx['model_name']}"
+                )
             else:
-                st.info("No model available.")
-
-        # --- Crisis Alert ---
+                st.info("No model available for SHAP analysis.")
+        
+        # --- CRISIS ALERT ---
         if phq_total >= 15 or gad_total >= 15:
             st.markdown("---")
-            st.error("### High Score Detected")
+            st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
             st.markdown("""
-           **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
-        
-        **Crisis Support:** Kenya Red Cross: **1199** | Befrienders Kenya: **+254 722 178 177** | Lifeline Kenya: **1195**
-        """)
+            **Your scores indicate significant distress. Please reach out for help immediately.**
+            
+             **Crisis Support Lines (Kenya):**
+            - **Kenya Red Cross:** 1199
+            - **Befrienders Kenya:** +254 722 178 177
+            - **Lifeline Kenya:** 1195
+            
+             [Click here for more mental health resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)
+            """)
 
         # --- Download ---
         st.markdown("---")
