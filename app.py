@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 #  Page config & CSS
 # ----------------------------------------------------------------------
 st.set_page_config(
-    page_title="Mental Health Screening - Kenya",
+    page_title="AdolecentMind",
     layout="wide",
     initial_sidebar_state="expanded",
     page_icon="brain"
