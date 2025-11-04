@@ -1,20 +1,18 @@
-# app.py (updated)
 import streamlit as st
 import pandas as pd
 import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from sklearn.metrics import recall_score, accuracy_score
-import base64
 
 # ----------------------------------------------------------------------
 #  Page config & Session State Initialization
 # ----------------------------------------------------------------------
 st.set_page_config(
-    page_title="AdolescentMind",
+    page_title="AdolecentMind",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🧠"
+    page_icon="brain"
 )
 
 # Initialize session state
@@ -26,15 +24,12 @@ if 'custom_bg_color' not in st.session_state:
     st.session_state.custom_bg_color = "#f0f2f6"
 if 'results' not in st.session_state:
     st.session_state.results = {}
-if 'uploaded_bg_path' not in st.session_state:
-    st.session_state.uploaded_bg_path = None
 
 # ----------------------------------------------------------------------
-#  Dynamic Background CSS (supports uploaded image)
+#  Dynamic Background CSS
 # ----------------------------------------------------------------------
 def get_background_css():
-    style = st.session_state.background_style
-    if style == "custom_color":
+    if st.session_state.background_style == "custom_color":
         return f"""
         <style>
             .stApp {{ 
@@ -44,7 +39,7 @@ def get_background_css():
             .score-card {{ background: rgba(255,255,255,0.9); }}
         </style>
         """
-    elif style == "gradient_blue":
+    elif st.session_state.background_style == "gradient_blue":
         return """
         <style>
             .stApp { 
@@ -54,7 +49,7 @@ def get_background_css():
             .score-card { background: rgba(255,255,255,0.95); }
         </style>
         """
-    elif style == "gradient_green":
+    elif st.session_state.background_style == "gradient_green":
         return """
         <style>
             .stApp { 
@@ -64,31 +59,6 @@ def get_background_css():
             .score-card { background: rgba(255,255,255,0.95); }
         </style>
         """
-    elif style == "uploaded_image" and st.session_state.uploaded_bg_path:
-        try:
-            with open(st.session_state.uploaded_bg_path, "rb") as f:
-                data = f.read()
-            b64 = base64.b64encode(data).decode()
-            ext = os.path.splitext(st.session_state.uploaded_bg_path)[1].lower().replace('.', '')
-            mime = f"image/{'jpeg' if ext in ['jpg','jpeg'] else ext}"
-            return f"""
-            <style>
-                .stApp {{
-                    background-image: url("data:{mime};base64,{b64}");
-                    background-size: cover;
-                    background-position: center;
-                    background-attachment: fixed;
-                }}
-                .score-card {{ background: rgba(255,255,255,0.9); }}
-            </style>
-            """
-        except Exception as e:
-            # fallback to default if reading fails
-            return """
-            <style>
-                .stApp { background: #f0f2f6; }
-            </style>
-            """
     else:
         return """
         <style>
@@ -100,27 +70,25 @@ st.markdown(get_background_css(), unsafe_allow_html=True)
 
 st.markdown("""
 <style>
-    .main-header {font-size:2.2rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:1rem;}
-    .sub-header {font-size:1.05rem;color:#555;text-align:center;margin-bottom:1.2rem;}
-    .score-card {padding:1.4rem;border-radius:12px;text-align:center;margin:0.6rem 0;
-                 box-shadow:0 4px 6px rgba(0,0,0,0.08);background:rgba(255,255,255,0.9);}
-    .score-number {font-size:3.2rem;font-weight:bold;margin:0.4rem 0;}
-    .score-label {font-size:1rem;font-weight:600;}
+    .main-header {font-size:2.5rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:1rem;}
+    .sub-header {font-size:1.2rem;color:#555;text-align:center;margin-bottom:2rem;}
+    .score-card {padding:2rem;border-radius:15px;text-align:center;margin:1rem 0;
+                 box-shadow:0 4px 6px rgba(0,0,0,0.1);background:rgba(255,255,255,0.9);}
+    .score-number {font-size:4rem;font-weight:bold;margin:0.5rem 0;}
+    .score-label {font-size:1.2rem;font-weight:600;}
     .best-model-card {background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-                      padding:0.8rem;border-radius:8px;color:white;margin:0.5rem 0;}
+                      padding:1rem;border-radius:10px;color:white;margin:0.5rem 0;}
     .stButton>button {width:100%;background-color:#1f77b4;color:white;
-                      font-size:1.02rem;padding:0.6rem;border-radius:8px;
+                      font-size:1.2rem;padding:0.75rem;border-radius:10px;
                       border:none;font-weight:bold;}
-    .stButton>button:hover {background-color:#155a8a;transform:scale(1.01);}
+    .stButton>button:hover {background-color:#155a8a;transform:scale(1.02);}
     .restart-button>button {background-color:#e74c3c !important;}
     .restart-button>button:hover {background-color:#c0392b !important;}
-    /* Tiny styling for top alert close button */
-    .alert-close {background:transparent;border:none;color:white;font-weight:bold;margin-left:16px;}
 </style>
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
-# Header / Logo
+#  Header
 # ----------------------------------------------------------------------
 BASE = os.path.dirname(__file__)
 LOGO_PATH = os.path.join(BASE, "images", "logo.png")
@@ -130,13 +98,13 @@ if os.path.exists(LOGO_PATH):
     with col2:
         st.image(LOGO_PATH, use_container_width=True)
 else:
-    st.markdown('<div class="main-header">AdolescentMind</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">AdolecentMind</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="sub-header">Depression & Anxiety Screening for Kenyan High School Students</div>',
             unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
-# Load models (unchanged)
+#  Load models
 # ----------------------------------------------------------------------
 PIPELINE_FILE = os.path.join(BASE, "trained_pipelines.pkl")
 METRICS_FILE  = os.path.join(BASE, "model_metrics.pkl")
@@ -155,56 +123,27 @@ if os.path.exists(METRICS_FILE):
         model_metrics = pickle.load(f)
 
 # ----------------------------------------------------------------------
-# Sidebar
+#  Sidebar
 # ----------------------------------------------------------------------
 with st.sidebar:
     st.title("Settings")
 
-    # Background Selector + Upload
+    # Background Selector
     st.markdown("### Background Style")
-    bg_options = ["Default", "Custom Color", "Gradient Blue", "Gradient Green", "Uploaded Image"]
-    # Determine index safely
-    mapping_to_state = {
-        "Default": "default",
-        "Custom Color": "custom_color",
-        "Gradient Blue": "gradient_blue",
-        "Gradient Green": "gradient_green",
-        "Uploaded Image": "uploaded_image"
-    }
-    reverse_map = {v: k for k, v in mapping_to_state.items()}
-    try:
-        default_index = bg_options.index(reverse_map.get(st.session_state.background_style, "Default"))
-    except Exception:
-        default_index = 0
-
     bg_choice = st.selectbox(
         "Choose Background",
-        bg_options,
-        index=default_index
+        ["Default", "Custom Color", "Gradient Blue", "Gradient Green"],
+        index=["default", "custom_color", "gradient_blue", "gradient_green"].index(st.session_state.background_style)
     )
-    # If user chooses custom color
     if bg_choice == "Custom Color":
         color = st.color_picker("Pick Color", st.session_state.custom_bg_color)
         st.session_state.custom_bg_color = color
-
-    # Upload button (next to background)
-    st.markdown("### Upload Background Image (optional)")
-    uploaded_bg = st.file_uploader("Upload image (png/jpg)", type=["png", "jpg", "jpeg"], key="bg_uploader")
-    if uploaded_bg is not None:
-        # save to images folder
-        images_dir = os.path.join(BASE, "images")
-        os.makedirs(images_dir, exist_ok=True)
-        save_path = os.path.join(images_dir, f"uploaded_bg_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.{uploaded_bg.name.split('.')[-1]}")
-        try:
-            with open(save_path, "wb") as out:
-                out.write(uploaded_bg.getbuffer())
-            st.session_state.uploaded_bg_path = save_path
-            st.success("Background image uploaded. Select 'Uploaded Image' in Background Style to apply it.")
-            st.image(save_path, caption="Uploaded preview", use_column_width=True)
-        except Exception as e:
-            st.error(f"Failed to save uploaded image: {e}")
-
-    st.session_state.background_style = mapping_to_state.get(bg_choice, "default")
+    st.session_state.background_style = {
+        "Default": "default",
+        "Custom Color": "custom_color",
+        "Gradient Blue": "gradient_blue",
+        "Gradient Green": "gradient_green"
+    }[bg_choice]
 
     # Model Selection
     selection_mode = st.radio(
@@ -222,13 +161,9 @@ with st.sidebar:
             "Anxiety Model:",
             list(pipelines.keys()) if pipelines else ["No models available"]
         )
-        # persist choices
-        st.session_state.manual_dep_model = manual_dep_model
-        st.session_state.manual_anx_model = manual_anx_model
 
     st.markdown("---")
 
-    # Best models display (unchanged labels)
     if model_metrics:
         st.markdown("### Best Models by Recall")
         best_dep_recall = -1
@@ -252,13 +187,13 @@ with st.sidebar:
             st.markdown(f"#### Depression")
             st.markdown(f"""
             <div class="best-model-card">
-                <div style="font-size:0.85rem;margin-bottom:0.4rem;">Selected Model</div>
-                <div style="font-size:1.05rem;font-weight:bold;margin-bottom:0.4rem;">{n}</div>
+                <div style="font-size:0.9rem;margin-bottom:0.5rem;">Selected Model</div>
+                <div style="font-size:1.2rem;font-weight:bold;margin-bottom:0.5rem;">{n}</div>
                 <div style="display:flex;justify-content:space-around;">
-                    <div><div style="font-size:0.75rem;opacity:0.9;">Recall</div>
-                         <div style="font-size:1.1rem;font-weight:bold;">{m['test_recall_per_target']['Is_Depressed']:.1%}</div></div>
-                    <div><div style="font-size:0.75rem;opacity:0.9;">Accuracy</div>
-                         <div style="font-size:1.1rem;font-weight:bold;">{m['test_accuracy_per_target']['Is_Depressed']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Recall</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_recall_per_target']['Is_Depressed']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Accuracy</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_accuracy_per_target']['Is_Depressed']:.1%}</div></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -268,13 +203,13 @@ with st.sidebar:
             st.markdown(f"#### Anxiety")
             st.markdown(f"""
             <div class="best-model-card">
-                <div style="font-size:0.85rem;margin-bottom:0.4rem;">Selected Model</div>
-                <div style="font-size:1.05rem;font-weight:bold;margin-bottom:0.4rem;">{n}</div>
+                <div style="font-size:0.9rem;margin-bottom:0.5rem;">Selected Model</div>
+                <div style="font-size:1.2rem;font-weight:bold;margin-bottom:0.5rem;">{n}</div>
                 <div style="display:flex;justify-content:space-around;">
-                    <div><div style="font-size:0.75rem;opacity:0.9;">Recall</div>
-                         <div style="font-size:1.1rem;font-weight:bold;">{m['test_recall_per_target']['Has_anxiety']:.1%}</div></div>
-                    <div><div style="font-size:0.75rem;opacity:0.9;">Accuracy</div>
-                         <div style="font-size:1.1rem;font-weight:bold;">{m['test_accuracy_per_target']['Has_anxiety']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Recall</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_recall_per_target']['Has_anxiety']:.1%}</div></div>
+                    <div><div style="font-size:0.8rem;opacity:0.9;">Accuracy</div>
+                         <div style="font-size:1.5rem;font-weight:bold;">{m['test_accuracy_per_target']['Has_anxiety']:.1%}</div></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -292,8 +227,8 @@ with st.sidebar:
                     anx.append(m[key].get('Has_anxiety', 0) * 100)
             if names:
                 fig = go.Figure(data=[
-                    go.Bar(name='Depression', x=names, y=dep),
-                    go.Bar(name='Anxiety', x=names, y=anx)
+                    go.Bar(name='Depression', x=names, y=dep, marker_color='#1f77b4'),
+                    go.Bar(name='Anxiety', x=names, y=anx, marker_color='#ff7f0e')
                 ])
                 fig.update_layout(barmode='group', height=300, title=f"{view_metric} (%)",
                                   yaxis_title=f"{view_metric} (%)", margin=dict(l=20,r=20,t=40,b=20))
@@ -303,7 +238,7 @@ with st.sidebar:
     st.info("**Recall** measures ability to identify students who may need support.")
 
 # ----------------------------------------------------------------------
-# Restart Button
+#  Restart Button
 # ----------------------------------------------------------------------
 if st.session_state.submitted:
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -312,16 +247,15 @@ if st.session_state.submitted:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.session_state.background_style = "default"
-            st.session_state.custom_bg_color = "#f0f2f6"
             st.rerun()
 
 # ----------------------------------------------------------------------
-# Form (Only if not submitted or after restart)
+#  Form (Only if not submitted or after restart)
 # ----------------------------------------------------------------------
 if not st.session_state.submitted:
     st.markdown("## Complete the Screening")
 
-    tab1, tab2, tab3 = st.tabs(["Demographics", "Depression", "Anxiety"])
+    tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
     with tab1:
         st.markdown("### School & Personal Information")
@@ -346,7 +280,7 @@ if not st.session_state.submitted:
         with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
 
     with tab2:
-        st.markdown("### Depression Assessment")
+        st.markdown("### PHQ-8 Depression Assessment")
         phq_qs = [
             "Little interest or pleasure in doing things",
             "Feeling down, depressed, or hopeless",
@@ -368,10 +302,10 @@ if not st.session_state.submitted:
                                                    label_visibility="collapsed", key=f"phq_{i}")
             st.markdown("---")
         phq_total = sum(phq.values())
-        st.markdown(f"### Depression (PHQ-8) Score: **{phq_total}** / 24")
+        st.markdown(f"### PHQ-8 Score: **{phq_total}** / 24")
 
     with tab3:
-        st.markdown("### Anxiety Assessment")
+        st.markdown("### GAD-7 Anxiety Assessment")
         gad_qs = [
             "Feeling nervous, anxious, or on edge",
             "Not being able to stop or control worrying",
@@ -391,7 +325,7 @@ if not st.session_state.submitted:
                                                    label_visibility="collapsed", key=f"gad_{i}")
             st.markdown("---")
         gad_total = sum(gad.values())
-        st.markdown(f"### Anxiety (GAD-7) Score: **{gad_total}** / 21")
+        st.markdown(f"### GAD-7 Score: **{gad_total}** / 21")
 
     # Submit Button
     st.markdown("---")
@@ -419,7 +353,7 @@ if not st.session_state.submitted:
         st.rerun()
 
 ## ----------------------------------------------------------------------
-# Results Section (Only after submission)
+#  Results Section (Only after submission)
 # ----------------------------------------------------------------------
 else:
     with st.spinner("Running models..."):
@@ -463,7 +397,7 @@ else:
         dep_proba = all_probas.get(best_dep_model, {}).get('dep')
         anx_proba = all_probas.get(best_anx_model, {}).get('anx')
 
-        # Severity (labels unchanged, just displayed differently)
+        # Severity
         phq_total = st.session_state.phq_total
         gad_total = st.session_state.gad_total
         dep_cat = "Minimal" if phq_total < 5 else "Mild" if phq_total < 10 else "Moderate" if phq_total < 15 else "Moderately Severe" if phq_total < 20 else "Severe"
@@ -482,19 +416,6 @@ else:
         live_recall_anx = recall_score(y_true_anx, [anx_pred_live], zero_division=0)
         live_acc_anx = accuracy_score(y_true_anx, [anx_pred_live])
 
-    # If high score(s) detected, show a dismissible banner / popup
-    high_alert = (phq_total >= 15) or (gad_total >= 15)
-    if high_alert:
-        # big dismissible banner (fixed at top)
-        st.markdown(f"""
-        <div id="high-alert" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;
-                        background:#ff4d4f;color:white;padding:14px 18px;border-radius:8px;
-                        box-shadow:0 6px 18px rgba(0,0,0,0.15);font-weight:700;max-width:920px;">
-            High score detected — Immediate support recommended.
-            <button class="alert-close" onclick="document.getElementById('high-alert').style.display='none'">✕</button>
-        </div>
-        """, unsafe_allow_html=True)
-
     st.markdown("---")
     st.markdown("## Screening Results")
 
@@ -511,8 +432,8 @@ else:
     with col1:
         st.markdown(f"""
         <div class="score-card" style="border-left:5px solid #1f77b4">
-            <h3 style="margin:0;color:#1f77b4">Depression</h3>
-            <div class="score-number">{phq_total}<span style="font-size:1.1rem;color:#666">/24</span></div>
+            <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
+            <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
             <div class="score-label">{dep_cat}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -524,8 +445,8 @@ else:
     with col2:
         st.markdown(f"""
         <div class="score-card" style="border-left:5px solid #ff7f0e">
-            <h3 style="margin:0;color:#ff7f0e">Anxiety</h3>
-            <div class="score-number">{gad_total}<span style="font-size:1.1rem;color:#666">/21</span></div>
+            <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
+            <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
             <div class="score-label">{anx_cat}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -534,14 +455,7 @@ else:
             pred_text += f" (Confidence: **{anx_proba:.1%}**)"
         st.markdown(pred_text)
 
-    # SHAP (unchanged)
-    st.markdown("---")
-    st.markdown("### Model Explanations")
-    tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
-
-       # ----------------------------------------------------------------------
-    # SHAP Explanations (Simplified for Non-Technical Users)
-    # ----------------------------------------------------------------------
+    # SHAP (Safe)
     st.markdown("---")
     st.markdown("### Model Explanations")
     tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
@@ -551,110 +465,64 @@ else:
             pre = pipe.named_steps['preprocessor']
             clf = pipe.named_steps['clf']
             X = pre.transform(user_df)
-            if hasattr(X, "toarray"):
-                X = X.toarray()
+            if hasattr(X, "toarray"): X = X.toarray()
 
-            # Friendly feature names
-            feature_names = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [
-                f"f{i}" for i in range(X.shape[1])
-            ]
-            friendly_names = {
-                "Parents_Dead": "Number of Parents Deceased",
-                "Parents_Home": "Parents at Home",
-                "Percieved_Academic_Abilities": "Self-Rated Academic Ability",
-                "Co_Curricular": "Participates in Co-curricular",
-                "Sports": "Participates in Sports",
-                "Gender_1": "Male",
-                "Gender_2": "Female",
-                "Age": "Age",
-                "Form": "Form Level",
-            }
-            feature_names = [friendly_names.get(f, f.replace("_", " ")) for f in feature_names]
+            feat = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [f"f{i}" for i in range(X.shape[1])]
 
-            # Choose the right SHAP explainer automatically
             base = clf.estimators_[target_idx] if hasattr(clf, "estimators_") else clf
 
-            # Use shap.Explainer (unified API handles both tree & linear models)
-            explainer = shap.Explainer(base, X, feature_names=feature_names)
-            shap_values = explainer(X)
+            if "Logistic" in type(base).__name__:
+                expl = shap.LinearExplainer(base, X)
+                sv = expl.shap_values(X)
+            else:
+                expl = shap.TreeExplainer(base)
+                sv = expl.shap_values(X)
+                if isinstance(sv, list):
+                    sv = sv[1] if len(sv) > 1 else sv[0]
 
-            # Single sample → use shap_values.values[0]
-            shap_df = pd.DataFrame({
-                "Feature": feature_names,
-                "Impact": shap_values.values[0]
-            })
-            shap_df["Direction"] = shap_df["Impact"].apply(
-                lambda x: "Increased Risk" if x > 0 else "Reduced Risk"
-            )
-            shap_df["AbsImpact"] = shap_df["Impact"].abs()
+            if sv.ndim > 1 and sv.shape[0] == 1:
+                sv = sv.flatten()
 
-            # Top 10 features
-            top_features = shap_df.sort_values("AbsImpact", ascending=False).head(10)
-            top_features = top_features.sort_values("Impact", ascending=True)
+            mean_abs = np.abs(sv).mean(axis=0) if sv.ndim > 1 else np.abs(sv)
+            top_i = np.argsort(mean_abs)[-10:][::-1]
+            top_i = [i for i in top_i if i < len(feat)]
+            top_f = [feat[i] for i in top_i]
+            top_v = mean_abs[top_i]
 
-            # Plot
-            fig, ax = plt.subplots(figsize=(10, 6))
-            colors = top_features["Impact"].apply(lambda x: "#e74c3c" if x > 0 else "#2ecc71")
-            bars = ax.barh(top_features["Feature"], top_features["Impact"], color=colors)
-
-            ax.set_title(f"Key Factors Influencing {title}", fontweight="bold")
-            ax.set_xlabel("Influence on Prediction (← reduces | increases →)")
-            ax.axvline(0, color="gray", linewidth=1)
-            ax.grid(axis="x", linestyle="--", alpha=0.5)
-
-            for bar, val in zip(bars, top_features["Impact"]):
-                ax.text(
-                    val + (0.02 if val > 0 else -0.02),
-                    bar.get_y() + bar.get_height() / 2,
-                    f"{val:+.3f}",
-                    va="center",
-                    ha="left" if val > 0 else "right",
-                    color="black",
-                    fontsize=9,
-                )
-
+            fig, ax = plt.subplots(figsize=(10,6))
+            bars = ax.barh(range(len(top_f)), top_v, color=plt.cm.RdYlGn_r(np.linspace(0.2,0.8,len(top_f))))
+            ax.set_yticks(range(len(top_f)))
+            ax.set_yticklabels(top_f, fontsize=10)
+            ax.set_xlabel("Mean |SHAP Value|")
+            ax.set_title(title, fontweight="bold")
+            ax.invert_yaxis()
+            for b, v in zip(bars, top_v):
+                ax.text(b.get_width()+0.001, b.get_y()+b.get_height()/2, f"{v:.3f}",
+                        va="center", ha="left", fontsize=9,
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
             plt.tight_layout()
             st.pyplot(fig)
             plt.close(fig)
-
-            st.caption("""
-            **How to interpret:**
-            - 🔴 Features on the right **increase** the predicted risk.
-            - 🟢 Features on the left **reduce** the predicted risk.
-            - Bar length = strength of influence on this prediction.
-            """)
+            st.caption("Longer bars = greater influence on model output.")
             return True
-
         except Exception as e:
-            st.warning(f"Unable to generate simplified SHAP: {e}")
+            st.warning(f"SHAP failed: {str(e)[:100]}...")
             return False
-
 
     with tab_d:
         if best_dep_model and pipelines.get(best_dep_model):
-            generate_shap_plot(
-                pipelines[best_dep_model],
-                user_df,
-                target_idx=0,
-                title="Depression Prediction"
-            )
+            generate_shap_plot(pipelines[best_dep_model], user_df, target_idx=0, title="Top Depression Risk Factors")
         else:
             st.info("No model available.")
 
     with tab_a:
         if best_anx_model and pipelines.get(best_anx_model):
             idx = 0 if best_dep_model != best_anx_model else 1
-            generate_shap_plot(
-                pipelines[best_anx_model],
-                user_df,
-                target_idx=idx,
-                title="Anxiety Prediction"
-            )
+            generate_shap_plot(pipelines[best_anx_model], user_df, target_idx=idx, title="Top Anxiety Risk Factors")
         else:
             st.info("No model available.")
 
-
-    # Crisis Alert details (unchanged contact info)
+    # Crisis Alert
     if phq_total >= 15 or gad_total >= 15:
         st.markdown("---")
         st.error("### High Score Detected")
@@ -665,7 +533,7 @@ else:
         - **School Counselor**
         """)
 
-    # Download Report (unchanged but renamed labels)
+    # Download Report (SAFE)
     st.markdown("---")
     dep_conf = f" (Conf: {dep_proba:.1%})" if dep_proba is not None else ""
     anx_conf = f" (Conf: {anx_proba:.1%})" if anx_proba is not None else ""
@@ -674,8 +542,8 @@ else:
 SCREENING RESULTS
 Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
 
-Depression (PHQ-8) Score: {phq_total}/24 → {dep_cat}
-Anxiety (GAD-7) Score: {gad_total}/21 → {anx_cat}
+PHQ-8 Score: {phq_total}/24 → {dep_cat}
+GAD-7 Score: {gad_total}/21 → {anx_cat}
 
 Model (Depression): {best_dep_model or 'N/A'} → Prediction: {dep_pred}{dep_conf}
 Model (Anxiety): {best_anx_model or 'N/A'} → Prediction: {anx_pred}{anx_conf}
