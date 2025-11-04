@@ -93,9 +93,7 @@ def get_background_css():
 # inject CSS
 st.markdown(get_background_css(), unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------
-# Global CSS
-# ----------------------------------------------------------------------
+# CSS
 st.markdown("""
 <style>
     :root {
@@ -185,6 +183,26 @@ st.markdown("""
         box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
     }
 
+        .severity-indicator {
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        text-align: center;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .severity-minimal { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+    .severity-mild { background: #fff3cd; color: #856404; border: 2px solid #ffeaa7; }
+    .severity-moderate { background: #ffe5b4; color: #d35400; border: 2px solid #ffa500; }
+    .severity-mod-severe { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+    .severity-severe { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+
+    .score-display {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0.5rem 0;
+    }
+
     /* Restart Button */
     .restart-button > button {
         background: var(--danger) !important;
@@ -252,16 +270,7 @@ if os.path.exists(METRICS_FILE):
 #  Sidebar
 with st.sidebar:
     st.title("Settings")
-
-    # 1. Model Status
-    st.markdown("### Model Status")
-    if pipelines:
-        st.success(f"**{len(pipelines)} model(s)** loaded")
-    else:
-        st.warning("No models loaded")
-    st.markdown("---")
-
-    # 2. Background Style
+    # Background Style
     st.markdown("### Background Style")
     bg_options = ["Default", "Custom Color", "Gradient Blue",
                   "Gradient Green", "Uploaded Image"]
@@ -397,89 +406,150 @@ with st.sidebar:
     st.markdown("---")
     st.info("**Recall** measures ability to identify students who may need support.")
 
-# ----------------------------------------------------------------------
 #  Form
-# ----------------------------------------------------------------------
-st.markdown("## Complete the Screening")
+if not st.session_state.submitted:
+    st.markdown("## Complete the Screening")
 
-tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+    tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
-with tab1:
-    st.markdown("### School & Personal Information")
-    col1, col2 = st.columns(2)
-    with col1:
-        boarding_day = st.selectbox("School Type", ["Boarding", "Day"])
-        school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"])
-        school_demo = st.selectbox("Location", ["Urban", "Rural", "Semi-urban"])
-        school_county = st.selectbox("County", ["Nairobi","Kiambu","Kisumu","Mombasa","Nakuru","Other"])
-        age = st.slider("Age", 12, 25, 16)
-        gender = st.selectbox("Gender", ["Male", "Female"])
-    with col2:
-        form = st.selectbox("Form", [1,2,3,4])
-        religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"])
-        parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"])
-        parents_dead = st.number_input("Deceased Parents", 0, 4, 0)
-        fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"])
-        mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"])
-    col3, col4, col5 = st.columns(3)
-    with col3: 
-        co_curr = st.selectbox("Co-curricular", ["Yes", "No"])
-    with col4: 
-        sports = st.selectbox("Sports", ["Yes", "No"])
-    with col5: 
-        acad_ability = st.slider("Academic Self-Rating", 1, 5, 3)
+    with tab1:
+        st.markdown("### School & Personal Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
+            school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
+            school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
+            school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"], key="school_county")
+            age = st.slider("Age", 12, 25, 16, key="age")
+            gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
+        with col2:
+            form = st.selectbox("Form", [1,2,3,4], key="form")
+            religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
+            parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
+            parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
+            fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"], key="fathers_edu")
+            mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"], key="mothers_edu")
+        col3, col4, col5 = st.columns(3)
+        with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
+        with col4: sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
+        with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
 
-with tab2:
-    st.markdown("### PHQ-8 (Past 2 Weeks)")
-    phq_qs = [
-        "Little interest or pleasure in doing things",
-        "Feeling down, depressed, or hopeless",
-        "Trouble falling or staying asleep, or sleeping too much",
-        "Feeling tired or having little energy",
-        "Poor appetite or overeating",
-        "Feeling bad about yourself — or that you are a failure",
-        "Trouble concentrating on things",
-        "Moving or speaking slowly, or being fidgety"
-    ]
-    likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
-    phq = {}
-    for i, q in enumerate(phq_qs, 1):
-        c1, c2 = st.columns([3,1])
-        with c1: 
-            st.markdown(f"**{i}.** {q}")
-        with c2:
-            phq[f'PHQ_{i}'] = st.select_slider(f"p{i}", options=[0,1,2,3],
-                                               format_func=lambda x: likert[x],
-                                               label_visibility="collapsed")
-        st.markdown("---")
-    phq_total = sum(phq.values())
-    st.markdown(f"### PHQ-8 Score: **{phq_total}** / 24")
+        with tab2:
+        st.markdown("### PHQ-8 Depression Assessment")
+        st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
+        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+        
+        phq_qs = [
+            "Little interest or pleasure in doing things",
+            "Feeling down, depressed, or hopeless",
+            "Trouble falling or staying asleep, or sleeping too much",
+            "Feeling tired or having little energy",
+            "Poor appetite or overeating",
+            "Feeling bad about yourself — or that you are a failure",
+            "Trouble concentrating on things",
+            "Moving or speaking slowly, or being fidgety"
+        ]
+        likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+        
+        phq = {}
+        for i, q in enumerate(phq_qs, 1):
+            c1, c2 = st.columns([3,1])
+            with c1: 
+                st.markdown(f"**{i}.** {q}")
+            with c2:
+                phq[f'PHQ_{i}'] = st.select_slider(
+                    f"p{i}", 
+                    options=[0,1,2,3], 
+                    format_func=lambda x: likert[x], 
+                    label_visibility="collapsed", 
+                    key=f"phq_{i}"
+                )
+            st.markdown("---")
+        
+        # Real-time calculation and display
+        phq_total = sum(phq.values())
+        
+        # Determine severity category
+        if phq_total < 5:
+            phq_severity = "Minimal"
+            severity_class = "severity-minimal"
+        elif phq_total < 10:
+            phq_severity = "Mild"
+            severity_class = "severity-mild"
+        elif phq_total < 15:
+            phq_severity = "Moderate"
+            severity_class = "severity-moderate"
+        elif phq_total < 20:
+            phq_severity = "Moderately Severe"
+            severity_class = "severity-mod-severe"
+        else:
+            phq_severity = "Severe"
+            severity_class = "severity-severe"
+        
+        # Display score and severity
+        st.markdown(f"""
+        <div class="{severity_class} severity-indicator">
+            <div style="font-size: 0.9rem; opacity: 0.8;">PHQ-8 Score</div>
+            <div class="score-display">{phq_total} / 24</div>
+            <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {phq_severity}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-with tab3:
-    st.markdown("### GAD-7 (Past 2 Weeks)")
-    gad_qs = [
-        "Feeling nervous, anxious, or on edge",
-        "Not being able to stop or control worrying",
-        "Worrying too much about different things",
-        "Trouble relaxing",
-        "Being so restless that it is hard to sit still",
-        "Becoming easily annoyed or irritable",
-        "Feeling afraid as if something awful might happen"
-    ]
-    gad = {}
-    for i, q in enumerate(gad_qs, 1):
-        c1, c2 = st.columns([3,1])
-        with c1: 
-            st.markdown(f"**{i}.** {q}")
-        with c2:
-            gad[f'GAD_{i}'] = st.select_slider(f"g{i}", options=[0,1,2,3],
-                                               format_func=lambda x: likert[x],
-                                               label_visibility="collapsed")
-        st.markdown("---")
-    gad_total = sum(gad.values())
-    st.markdown(f"### GAD-7 Score: **{gad_total}** / 21")
-
-# ----------------------------------------------------------------------
+        with tab3:
+        st.markdown("### GAD-7 Anxiety Assessment")
+        st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms...")
+        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+        
+        gad_qs = [
+            "Feeling nervous, anxious, or on edge",
+            "Not being able to stop or control worrying",
+            "Worrying too much about different things",
+            "Trouble relaxing",
+            "Being so restless that it is hard to sit still",
+            "Becoming easily annoyed or irritable",
+            "Feeling afraid as if something awful might happen"
+        ]
+        
+        gad = {}
+        for i, q in enumerate(gad_qs, 1):
+            c1, c2 = st.columns([3,1])
+            with c1: 
+                st.markdown(f"**{i}.** {q}")
+            with c2:
+                gad[f'GAD_{i}'] = st.select_slider(
+                    f"g{i}", 
+                    options=[0,1,2,3], 
+                    format_func=lambda x: likert[x], 
+                    label_visibility="collapsed", 
+                    key=f"gad_{i}"
+                )
+            st.markdown("---")
+        
+        # Real-time calculation and display
+        gad_total = sum(gad.values())
+        
+        # Determine severity category
+        if gad_total < 5:
+            gad_severity = "Minimal"
+            severity_class = "severity-minimal"
+        elif gad_total < 10:
+            gad_severity = "Mild"
+            severity_class = "severity-mild"
+        elif gad_total < 15:
+            gad_severity = "Moderate"
+            severity_class = "severity-moderate"
+        else:
+            gad_severity = "Severe"
+            severity_class = "severity-severe"
+        
+        # Display score and severity
+        st.markdown(f"""
+        <div class="{severity_class} severity-indicator">
+            <div style="font-size: 0.9rem; opacity: 0.8;">GAD-7 Score</div>
+            <div class="score-display">{gad_total} / 21</div>
+            <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {gad_severity}</div>
+        </div>
+        """, unsafe_allow_html=True)
 #  Submit
 # ----------------------------------------------------------------------
 st.markdown("---")
@@ -539,7 +609,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
     except Exception as e:
         st.warning(f"SHAP failed: {e}")
         return False
-
+        
     if submitted and (phq_total >= 15 or gad_total >= 15):
         st.error("### ⚠️ URGENT: High Score Detected")
         st.markdown("""
@@ -661,6 +731,16 @@ if submitted:
                                    title="Anxiety Risk Factors")
             else:
                 st.info("No model available.")
+
+        # --- Crisis Alert ---
+        if phq_total >= 15 or gad_total >= 15:
+            st.markdown("---")
+            st.error("### High Score Detected")
+            st.markdown("""
+           **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
+        
+        **Crisis Support:** Kenya Red Cross: **1199** | Befrienders Kenya: **+254 722 178 177** | Lifeline Kenya: **1195**
+        """)
 
         # --- Download ---
         st.markdown("---")
