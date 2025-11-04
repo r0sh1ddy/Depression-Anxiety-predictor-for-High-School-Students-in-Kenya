@@ -540,6 +540,15 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
         st.warning(f"SHAP failed: {e}")
         return False
 
+    if submitted and (phq_total >= 15 or gad_total >= 15):
+        st.error("### ⚠️ URGENT: High Score Detected")
+        st.markdown("""
+        **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
+        
+        **Crisis Support:** Kenya Red Cross: **1199** | Befrienders Kenya: **+254 722 178 177** | Lifeline Kenya: **1195**
+        """)
+        st.markdown("---")
+
 # ----------------------------------------------------------------------
 #  Process Submission
 # ----------------------------------------------------------------------
@@ -652,17 +661,6 @@ if submitted:
                                    title="Anxiety Risk Factors")
             else:
                 st.info("No model available.")
-
-        # --- Crisis Alert ---
-        if phq_total >= 15 or gad_total >= 15:
-            st.markdown("---")
-            st.error("### High Score Detected")
-            st.markdown("""
-            **Immediate support is recommended.**
-            - **Kenya Red Cross:** 1199  
-            - **Befrienders Kenya:** +254 722 178 177  
-            - **School Counselor**
-            """)
 
         # --- Download ---
         st.markdown("---")
