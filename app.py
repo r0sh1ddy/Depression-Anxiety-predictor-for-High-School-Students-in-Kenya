@@ -4,6 +4,19 @@ import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
+icon_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
+logo_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
+favicon_path = "app_images/Adolescence.jpg"
+
+# Use favicon if available, else fallback to icon
+page_icon = favicon_path if os.path.exists(favicon_path) else icon_path if os.path.exists(icon_path) else "🧠"
+
+st.set_page_config(
+    page_title="AdolescentMind",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    page_icon=page_icon
+)
 
 BASE = os.path.dirname(__file__)
 TEST_DATA_FILE = os.path.join(BASE, "test_data.csv") 
@@ -63,22 +76,6 @@ def calculate_live_metrics(model, X_test, y_test, target_idx):
     except Exception as e:
         st.warning(f"Metric calculation error: {e}")
         return {'recall': 0, 'accuracy': 0, 'samples': 0}
-
-
-
-
-#  Page config & CSS
-
-icon_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
-logo_path = "app_images/80798728-1633-47f7-a720-6d1cb06d3cae.jpg"
-
-
-st.set_page_config(
-    page_title="AdolescentMind",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    page_icon=icon_path if os.path.exists(icon_path) else "brain"
-)
 
 if 'submitted' not in st.session_state:
     st.session_state.submitted = False
