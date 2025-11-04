@@ -56,5 +56,5 @@ jupyter notebook index.ipynb
 # Run Streamlit app
 - bash
 streamlit run app.py
-
+- The link to our Tableau Dashboard is attached below https://public.tableau.com/views/Book1_17622355863080/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link
 
