@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import pickle, os, numpy as np
-import shap, matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from sklearn.metrics import recall_score, accuracy_score
+from sklearn.inspection import permutation_importance
 from PIL import Image
 import base64
 import io
@@ -27,10 +28,9 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # ----------------------------------------------------------------------
-#  Human-Readable Feature Name Mapping
+#  Human-Readable Feature Names
 # ----------------------------------------------------------------------
 FEATURE_NAME_MAP = {
-    # Demographics
     "Boarding_day": "School Type",
     "School_type": "School Gender",
     "School_Demographics": "School Level",
@@ -46,8 +46,6 @@ FEATURE_NAME_MAP = {
     "Co_Curricular": "Co-curricular Activities",
     "Sports": "Sports Participation",
     "Percieved_Academic_Abilities": "Academic Self-Rating",
-
-    # PHQ-8
     "PHQ_1": "Little interest in doing things",
     "PHQ_2": "Feeling down or hopeless",
     "PHQ_3": "Sleep problems",
@@ -56,8 +54,6 @@ FEATURE_NAME_MAP = {
     "PHQ_6": "Feeling bad about self",
     "PHQ_7": "Trouble concentrating",
     "PHQ_8": "Moving/speaking slowly or fidgety",
-
-    # GAD-7
     "GAD_1": "Feeling nervous or on edge",
     "GAD_2": "Can't stop worrying",
     "GAD_3": "Worrying too much",
@@ -87,26 +83,25 @@ st.markdown(get_background_css(), unsafe_allow_html=True)
 # Custom CSS
 st.markdown("""
 <style>
-    .main-header {font-size:2.5rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:1rem;}
-    .sub-header {font-size:1.2rem;color:#555;text-align:center;margin-bottom:2rem;}
+    .main-header {font-size:2.5rem;font-weight:bold;color:#1f77b4;text-align:center;margin-bottom:0.5rem;}
+    .sub-header {font-size:1.2rem;color:#555;text-align:center;margin-bottom:1.5rem;}
+    .expectations {background:#f8f9fa;padding:1.5rem;border-radius:12px;margin:1rem 0;
+                   border-left:5px solid #1f77b4;font-size:1rem;line-height:1.6;}
     .score-card {padding:2rem;border-radius:15px;text-align:center;margin:1rem 0;
-                 box-shadow:0 4px 6px rgba(0,0,0,0.1);transition:0.3s;}
+                 box-shadow:0 4px 6px rgba(0,0,0,0.1);}
     .score-number {font-size:4rem;font-weight:bold;margin:0.5rem 0;}
     .score-label {font-size:1.2rem;font-weight:600;}
-    .best-model-card {background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-                      padding:1rem;border-radius:10px;color:white;margin:0.5rem 0;}
     .stButton>button {width:100%;background-color:#1f77b4;color:white;
-                      font-size:1.2rem;padding:0.75rem;border-radius:10px;
-                      border:none;font-weight:bold;}
+                      font-size:1.2rem;padding:0.75rem;border-radius:10px;border:none;font-weight:bold;}
     .stButton>button:hover {background-color:#155a8a;transform:scale(1.02);}
     .restart-button>button {background-color:#e74c3c !important;}
     .restart-button>button:hover {background-color:#c0392b !important;}
-    .assessment-info {font-size:0.9rem; color:#666; margin-top:0.5rem; font-style:italic;}
+    .assessment-info {font-size:0.9rem;color:#666;margin-top:0.5rem;font-style:italic;}
 </style>
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
-#  Header
+#  Header + Expectations
 # ----------------------------------------------------------------------
 BASE = os.path.dirname(__file__)
 LOGO_PATH = os.path.join(BASE, "images", "logo.png")
@@ -119,6 +114,18 @@ else:
     st.markdown('<div class="main-header">AdolecentMind</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="sub-header">Depression & Anxiety Screening for Kenyan High School Students</div>', unsafe_allow_html=True)
+
+# Expectations Banner
+st.markdown("""
+<div class="expectations">
+    <strong>What to Expect:</strong><br>
+    • This is a <strong>confidential screening tool</strong> — your answers are <strong>not saved or shared</strong>.<br>
+    • Answer honestly about the <strong>past 2 weeks</strong>.<br>
+    • You'll get a <strong>score + AI risk prediction</strong> based on Kenyan student data.<br>
+    • <strong>Not a diagnosis</strong> — but a helpful first step.<br>
+    • If results concern you, <a href="https://findahelpline.com/countries/ke" target="_blank">click here for free, anonymous help in Kenya</a>.
+</div>
+""", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
 #  Load Models
@@ -143,7 +150,6 @@ if os.path.exists(METRICS_FILE):
 with st.sidebar:
     st.title("Appearance")
 
-    # Background
     bg_choice = st.selectbox(
         "Background Style",
         ["Default", "Custom Color", "Gradient Blue", "Gradient Green", "Upload Image"],
@@ -165,23 +171,18 @@ with st.sidebar:
         "Upload Image": "image"
     }[bg_choice]
 
-    # Card Colors
     st.markdown("### Card Backgrounds")
     st.session_state.dep_card_color = st.color_picker("Depression Card", st.session_state.dep_card_color)
     st.session_state.anx_card_color = st.color_picker("Anxiety Card", st.session_state.anx_card_color)
 
     st.markdown("---")
-
-    # Model Selection
-    selection_mode = st.radio("Model Selection:", ["Auto-Select Best", "Manual Selection", "View All Models"])
+    selection_mode = st.radio("Model Selection:", ["Auto-Select Best", "Manual Selection"])
     if selection_mode == "Manual Selection":
-        st.markdown("### Choose Models")
         manual_dep_model = st.selectbox("Depression Model:", list(pipelines.keys()) if pipelines else ["No models"])
         manual_anx_model = st.selectbox("Anxiety Model:", list(pipelines.keys()) if pipelines else ["No models"])
         st.session_state.manual_dep_model = manual_dep_model
         st.session_state.manual_anx_model = manual_anx_model
 
-    # Best Models
     if model_metrics:
         st.markdown("### Best Models by Recall")
         best_dep = max(model_metrics.items(), key=lambda x: x[1].get('test_recall_per_target',{}).get('Is_Depressed',0))[0] if model_metrics else None
@@ -192,8 +193,6 @@ with st.sidebar:
         if best_anx:
             m = model_metrics[best_anx]
             st.markdown(f"**Anxiety:** {best_anx} — Recall: **{m['test_recall_per_target']['Has_anxiety']:.1%}**")
-
-    st.info("**Recall** = ability to detect students needing help.")
 
 # ----------------------------------------------------------------------
 #  Restart Button
@@ -238,8 +237,8 @@ if not st.session_state.submitted:
 
     with tab2:
         st.markdown("### PHQ-8 Depression Assessment")
-        st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks. It helps identify if you're experiencing common signs of depression, such as low mood or loss of interest in activities. Your honest responses will help generate a personalized risk assessment using machine learning models trained on Kenyan youth data. This is not a diagnosis but a starting point for understanding your mental health and seeking support if needed. Why complete it? It empowers you to recognize patterns and take proactive steps toward well-being.")
-        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+        st.markdown("**What is PHQ-8?** A quick 8-question tool to check for signs of depression (e.g., low mood, lack of energy) over the past 2 weeks. Your answers help the AI understand your risk level. **Why do it?** Early awareness can lead to better support.")
+        st.markdown('<div class="assessment-info">Private • Not a diagnosis • Takes 2 minutes</div>', unsafe_allow_html=True)
         phq_qs = [
             "Little interest or pleasure in doing things",
             "Feeling down, depressed, or hopeless",
@@ -263,8 +262,8 @@ if not st.session_state.submitted:
 
     with tab3:
         st.markdown("### GAD-7 Anxiety Assessment")
-        st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms over the past 2 weeks. It detects feelings like excessive worry, restlessness, or irritability that may indicate anxiety. By sharing your experiences, you'll receive an AI-powered analysis tailored to Kenyan high school students. This screening encourages self-awareness and early intervention. Why do it? It highlights potential anxiety triggers, helping you build coping strategies and know when to reach out for help.")
-        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+        st.markdown("**What is GAD-7?** A 7-question check for anxiety symptoms (e.g., worry, restlessness) over the past 2 weeks. The AI uses this to estimate your anxiety risk. **Why do it?** Spotting patterns early helps you take control.")
+        st.markdown('<div class="assessment-info">Private • Not a diagnosis • Takes 2 minutes</div>', unsafe_allow_html=True)
         gad_qs = [
             "Feeling nervous, anxious, or on edge",
             "Not being able to stop or control worrying",
@@ -313,7 +312,7 @@ if not st.session_state.submitted:
 #  Results
 # ----------------------------------------------------------------------
 else:
-    with st.spinner("Analyzing responses..."):
+    with st.spinner("Analyzing..."):
         user_df = pd.DataFrame([st.session_state.input_data])
         all_preds = {}
         all_probas = {}
@@ -330,7 +329,7 @@ else:
                 all_preds[name] = {'dep': pred[0], 'anx': pred[1] if len(pred) > 1 else None}
                 all_probas[name] = {'dep': dep_prob, 'anx': anx_prob}
             except Exception as e:
-                st.warning(f"Model **{name}** failed: {str(e)[:60]}...")
+                st.warning(f"Model **{name}** failed: {str(e)[:50]}...")
                 all_preds[name] = {'dep': None, 'anx': None}
                 all_probas[name] = {'dep': None, 'anx': None}
 
@@ -400,81 +399,57 @@ else:
             txt += f" | **Confidence: {anx_proba:.1%}**"
         st.markdown(txt)
 
-    # SHAP with HUMAN-READABLE names
+    # Permutation Importance (NO SHAP!)
     st.markdown("---")
-    st.markdown("### Key Risk Factors")
-    tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
+    st.markdown("### Top Risk Factors (How much each answer influenced the result)")
 
-    def generate_shap_plot(pipe, df, idx, title):
+    def plot_importance(pipe, df, idx, title):
         try:
             pre = pipe.named_steps['preprocessor']
             clf = pipe.named_steps['clf']
             X = pre.transform(df)
             if hasattr(X, "toarray"): X = X.toarray()
-            raw_features = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [f"f{i}" for i in range(X.shape[1])]
 
-            # MAP to human-readable
+            raw_features = pre.get_feature_names_out() if hasattr(pre, 'get_feature_names_out') else [f"f{i}" for i in range(X.shape[1])]
             features = [FEATURE_NAME_MAP.get(f.split("__")[-1] if "__" in f else f, f) for f in raw_features]
 
             base = clf.estimators_[idx] if hasattr(clf, "estimators_") else clf
+            result = permutation_importance(base, X, [[0]], n_repeats=10, random_state=42, scoring='roc_auc')
+            importances = result.importances_mean
 
-            # Skip unsupported models
-            if hasattr(base, 'monotonic_cst') or 'monotonic' in str(type(base)).lower():
-                st.info("SHAP skipped: Model uses advanced constraints.")
-                return
-
-            if "tree" in str(type(base)).lower() or "forest" in str(type(base)).lower():
-                expl = shap.TreeExplainer(base)
-                sv = expl.shap_values(X)
-                sv = sv[1] if isinstance(sv, list) and len(sv) > 1 else sv
-            elif "logistic" in str(type(base)).lower():
-                expl = shap.LinearExplainer(base, X)
-                sv = expl.shap_values(X)
-            else:
-                st.warning("SHAP not supported.")
-                return
-
-            if sv.ndim > 1: sv = sv.flatten()
-            mean_abs = np.abs(sv).mean(axis=0) if sv.ndim > 1 else np.abs(sv)
-            top_i = np.argsort(mean_abs)[-10:][::-1]
-            top_i = [i for i in top_i if i < len(features)]
+            top_i = np.argsort(importances)[-10:][::-1]
             top_f = [features[i] for i in top_i]
-            top_v = mean_abs[top_i]
-
-            if not top_f:
-                st.info("No significant factors.")
-                return
+            top_v = importances[top_i]
 
             fig, ax = plt.subplots(figsize=(10,6))
-            ax.barh(range(len(top_f)), top_v, color=plt.cm.RdYlGn_r(np.linspace(0.2,0.8,len(top_f))))
+            ax.barh(range(len(top_f)), top_v, color=plt.cm.RdYlBu_r(np.linspace(0.3,0.9,len(top_f))))
             ax.set_yticks(range(len(top_f)))
             ax.set_yticklabels(top_f, fontsize=10)
-            ax.set_xlabel("Mean |SHAP Value|")
+            ax.set_xlabel("Permutation Importance (Drop in AUC)")
             ax.set_title(title)
             ax.invert_yaxis()
             plt.tight_layout()
             st.pyplot(fig)
             plt.close(fig)
-            st.caption("Longer bars = stronger influence on the prediction")
-
+            st.caption("Higher value = stronger influence on the AI's decision")
         except Exception as e:
-            st.warning(f"SHAP error: {str(e)[:100]}")
+            st.info("Feature importance unavailable for this model.")
 
+    tab_d, tab_a = st.tabs(["Depression", "Anxiety"])
     with tab_d:
         if best_dep_model and pipelines.get(best_dep_model):
-            generate_shap_plot(pipelines[best_dep_model], user_df, 0, "Top Depression Risk Factors")
+            plot_importance(pipelines[best_dep_model], user_df, 0, "Top Depression Risk Factors")
         else: st.info("No model")
-
     with tab_a:
         if best_anx_model and pipelines.get(best_anx_model):
             idx = 0 if best_dep_model != best_anx_model else 1
-            generate_shap_plot(pipelines[best_anx_model], user_df, idx, "Top Anxiety Risk Factors")
+            plot_importance(pipelines[best_anx_model], user_df, idx, "Top Anxiety Risk Factors")
         else: st.info("No model")
 
-    # Crisis Alert
+    # High Risk Alert
     if phq_total >= 15 or gad_total >= 15:
-        st.error("### High Risk — Seek Help Now")
-        st.markdown("[Find Help: Kenya Mental Health Resources](https://findahelpline.com/countries/ke)")
+        st.error("### High Risk Detected — Get Support Now")
+        st.markdown("**Free, anonymous help in Kenya:** [findahelpline.com/ke](https://findahelpline.com/countries/ke)")
 
     # Report
     st.markdown("---")
@@ -490,12 +465,13 @@ GAD-7: {gad_total}/21 → {anx_cat}
 Depression: {best_dep_model} → {dep_pred}{dep_conf}
 Anxiety: {best_anx_model} → {anx_pred}{anx_conf}
 
-Live Metrics:
+Live Performance:
   Depression → Recall: {live_recall_dep:.1%}, Accuracy: {live_acc_dep:.1%}
   Anxiety → Recall: {live_recall_anx:.1%}, Accuracy: {live_acc_anx:.1%}
 
 SCREENING TOOL ONLY — NOT A DIAGNOSIS
+Get help: https://findahelpline.com/countries/ke
     """
     st.download_button("Download Report", report, f"screening_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.txt", "text/plain")
 
-    st.warning("**SCREENING ONLY** — Consult a professional.")
+    st.warning("**This is a screening tool only.** Always consult a professional for diagnosis.")
