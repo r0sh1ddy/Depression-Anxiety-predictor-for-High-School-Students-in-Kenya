@@ -4,6 +4,7 @@ import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
+BASE = os.path.dirname(__file__)
 TEST_DATA_FILE = os.path.join(BASE, "test_data.csv") 
 
 test_data = None
@@ -276,10 +277,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ----------------------------------------------------------------------
-# Header & Logo
-# ----------------------------------------------------------------------
-BASE = os.path.dirname(__file__)
+# Header 
 LOGO_PATH = os.path.join(BASE, "app_images", "icon.jpg")
 FAVICON_PATH = os.path.join(BASE, "app_images", "Adolescence.jpg")
 
