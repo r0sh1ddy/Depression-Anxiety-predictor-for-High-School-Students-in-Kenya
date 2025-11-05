@@ -692,8 +692,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 
 #  Process Submission
 live_results = []
-best_dep = {}
-best_anx = {}
+
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
