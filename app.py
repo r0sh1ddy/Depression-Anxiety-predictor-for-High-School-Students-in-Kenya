@@ -710,7 +710,9 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
-        edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
+        # --- Clean input ---
+        edu_map = {"None": 0, "Primary": 1, "Secondary": 2, "Tertiary": 3, "University": 4}
+
         input_data = {
             "Boarding_day": boarding_day,
             "School_type": school_type,
@@ -720,7 +722,7 @@ if submitted:
             "Gender": 1 if gender == "Male" else 2,
             "Form": int(form),
             "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
-            "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
+            "Parents_Home": {"None": 0, "One parent": 1, "Both parents": 2}.get(parents_home, 0),
             "Parents_Dead": int(parents_dead),
             "Fathers_Education": edu_map.get(fathers_edu, 0),
             "Mothers_Education": edu_map.get(mothers_edu, 0),
@@ -728,9 +730,14 @@ if submitted:
             "Sports": 1 if sports == "Yes" else 0,
             "Percieved_Academic_Abilities": int(acad_ability)
         }
+
+        # Include PHQ and GAD responses
         input_data.update(phq)
         input_data.update(gad)
+
+        # Create a single-row DataFrame for this user (used for prediction + PCA decoding + SHAP-style visualization)
         user_df = pd.DataFrame([input_data])
+
 
         # --- Prepare test data if available ---
         use_live_metrics = test_data is not None
