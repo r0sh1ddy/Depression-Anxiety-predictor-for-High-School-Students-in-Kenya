@@ -907,19 +907,22 @@ final_anx_score = min(gad_total + demo_score_anx, 21)
 dep_cat = "Minimal" if final_dep_score < 5 else "Mild" if final_dep_score < 10 else "Moderate" if final_dep_score < 15 else "Moderately Severe" if final_dep_score < 20 else "Severe"
 anx_cat = "Minimal" if final_anx_score < 5 else "Mild" if final_anx_score < 10 else "Moderate" if final_anx_score < 15 else "Severe"
 
-# --------------------------------------------------------------------
-# DISPLAY RESULTS (Cards)
-# --------------------------------------------------------------------
+# DISPLAY RESULTS 
+if live_results and len(live_results) > 0:
+    best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
+    best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
+else:
+    st.error("No valid model predictions were generated. Please check your inputs or model setup.")
+    best_dep = {'dep_prediction': 0, 'dep_probability': 0, 'model_name': 'N/A'}
+    best_anx = {'anx_prediction': 0, 'anx_probability': 0, 'model_name': 'N/A'}
+
 col1, col2 = st.columns(2)
 
 with col1:
-    if not best_dep:
-        st.error("No valid depression model results to display.")
-        st.stop()
-    
-    dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
-    dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
-    dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
+    dep_pred_val = best_dep.get('dep_prediction', 0)
+    dep_risk = "POSITIVE (At Risk)" if dep_pred_val == 1 else "NEGATIVE (Low Risk)"
+    dep_color = "#e74c3c" if dep_pred_val == 1 else "#27ae60"
+    dep_icon = "🔴" if dep_pred_val == 1 else "🟢"
     
     st.markdown(f"""
     <div class="score-card" style="border-left:5px solid {dep_color}">
@@ -937,9 +940,11 @@ with col1:
     </div>
     """, unsafe_allow_html=True)
     
-    if best_dep['dep_probability'] is not None:
-        st.metric(" Risk Probability", f"{best_dep['dep_probability']:.1%}",
+    dep_proba_val = best_dep.get('dep_probability')
+    if dep_proba_val is not None:
+        st.metric("Risk Probability", f"{dep_proba_val:.1%}",
                   help="Model's confidence in this prediction")
+
 
 with col2:
     anx_risk = "POSITIVE (At Risk)" if best_anx['anx_prediction'] == 1 else "NEGATIVE (Low Risk)"
