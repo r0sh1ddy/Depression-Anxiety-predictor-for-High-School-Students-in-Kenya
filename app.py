@@ -15,11 +15,11 @@ if os.path.exists(TEST_DATA_FILE):
                 test_data = pickle.load(f)
         else:  # CSV
             test_data = pd.read_csv(TEST_DATA_FILE)
-        st.sidebar.success(f"Test data loaded: {len(test_data)} samples")
+        st.sidebar.success()
     except Exception as e:
-        st.sidebar.error(f"Test data load failed: {e}")
+        st.sidebar.error()
 else:
-    st.sidebar.warning("No test data found - using stored metrics")
+    st.sidebar.warning()
 
 
 # Add this function to calculate real-time metrics
@@ -461,6 +461,52 @@ with st.sidebar:
 #  Form
 if not st.session_state.submitted:
     st.markdown("## Complete the Screening")
+
+    # Adding introductory explanation for users
+    gradient_color = "#ffffff" 
+    if st.session_state.background_style == "gradient_blue":
+        gradient_color = "#e8ecff"
+    elif st.session_state.background_style == "gradient_green":
+        gradient_color = "#e6ffee"
+    else:
+        gradient_color = "#2c3e50"
+
+    st.markdown(f"""
+    <div style="
+        background: rgba(255,255,255,0.15);
+        padding: 1.3rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        color: {gradient_color};
+    ">
+        <h4 style="color:{gradient_color}; margin-top:0;">About this Screening</h4>
+        <p style="font-size:1rem; line-height:1.6;">
+            This digital screening helps identify possible signs of 
+            <strong>depression</strong> and <strong>anxiety</strong> among Kenyan high school students.
+            It includes three short parts:
+        </p>
+
+        <ul style="font-size:0.95rem; line-height:1.6;">
+            <li><strong>Demographics</strong>Basic background details such as your age, school type,
+            and family situation. These help the model understand how different environments and experiences
+            may influence wellbeing.</li>
+
+            <li><strong>PHQ-8 (Depression Assessment)</strong>8 short questions about mood, motivation,
+            sleep, and concentration over the past two weeks. Each question uses the same 4-point scale:
+            <em>"Not at all", "Several days", "More than half the days", "Nearly every day"</em>.</li>
+
+            <li><strong>GAD-7 (Anxiety Assessment)</strong>7 questions focused on worry, restlessness,
+            and tension, using the same 4-point response scale.</li>
+        </ul>
+
+        <p style="font-size:0.95rem; margin-top:1rem;">
+            <strong>Note:</strong> Your responses are <u>confidential</u>. The screening provides insight and 
+            awareness — not a formal diagnosis. If you score high, you’ll receive resources for support.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
 
     tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
