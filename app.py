@@ -19,36 +19,36 @@ if os.path.exists(TEST_DATA_FILE):
         passss
 
 
-# Add this function to calculate real-time metrics
-def calculate_live_metrics(model, X_test, y_test, target_idx):
-    """
-    Calculate real-time recall and accuracy for a specific target
-
-    Args: session, 1 for anxiety
-
-    Returns:
-        dict with recall and accuracy
-    """
+# FINAL SAFE VERSION — handles binary/multiclass + skips failed models
+def calculate_live_metrics(model, X_test, y_test, target_idx, model_name="Unknown Model"):
     from sklearn.metrics import recall_score, accuracy_score
+    import numpy as np
+    import streamlit as st
 
     try:
-        # Get predictions
+        # --- Get predictions safely ---
         y_pred = model.predict(X_test)
 
-        # Handle multi-output vs single output
-        if len(y_pred.shape) > 1:
+        # Handle multi-output predictions
+        if len(np.shape(y_pred)) > 1:
             y_pred_target = y_pred[:, target_idx]
         else:
             y_pred_target = y_pred
 
         # Handle multi-output ground truth
-        if len(y_test.shape) > 1:
+        if len(np.shape(y_test)) > 1:
             y_test_target = y_test[:, target_idx]
         else:
             y_test_target = y_test
 
-        # Calculate metrics
-        recall = recall_score(y_test_target, y_pred_target, zero_division=0)
+        # --- Auto-detect label structure ---
+        unique_labels = np.unique(y_test_target)
+        if len(unique_labels) > 2:
+            recall = recall_score(y_test_target, y_pred_target, average='macro', zero_division=0)
+        else:
+            recall = recall_score(y_test_target, y_pred_target, average='binary', zero_division=0)
+
+        # --- Accuracy ---
         accuracy = accuracy_score(y_test_target, y_pred_target)
 
         return {
@@ -56,9 +56,11 @@ def calculate_live_metrics(model, X_test, y_test, target_idx):
             'accuracy': accuracy,
             'samples': len(y_test_target)
         }
+
     except Exception as e:
-        st.warning(f"Metric calculation error: {e}")
+        st.warning(f"Skipping {model_name}: {e}")
         return {'recall': 0, 'accuracy': 0, 'samples': 0}
+
 
 #  Page config 
 icon_path = "app_images/icon.jpg"
@@ -454,234 +456,235 @@ with st.sidebar:
 
     st.markdown("---")
     st.info("**Recall** measures ability to identify students who may need support.")
-    #  Form
-    if not st.session_state.submitted:
-        st.markdown("## Complete the Screening")
 
+#  Form
+if not st.session_state.submitted:
+    st.markdown("## Complete the Screening")
+
+    text_color = "#2c3e50"
+    bg_card_color = "rgba(255,255,255,0.95)"  
+
+    if st.session_state.background_style == "gradient_blue":
         text_color = "#2c3e50"
-        bg_card_color = "rgba(255,255,255,0.95)"  
+        bg_card_color = "rgba(255,255,255,0.95)"
+    elif st.session_state.background_style == "gradient_green":
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
+    elif st.session_state.background_style == "uploaded_image":
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
+    else:
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
 
-        if st.session_state.background_style == "gradient_blue":
-            text_color = "#2c3e50"
-            bg_card_color = "rgba(255,255,255,0.95)"
-        elif st.session_state.background_style == "gradient_green":
-            text_color = "#2c3e50"
-            bg_card_color = "rgba(255,255,255,0.95)"
-        elif st.session_state.background_style == "uploaded_image":
-            text_color = "#2c3e50"
-            bg_card_color = "rgba(255,255,255,0.95)"
-        else:
-            text_color = "#2c3e50"
-            bg_card_color = "rgba(255,255,255,0.95)"
+    st.markdown(f"""
+    <div style="
+        background: {bg_card_color};
+        padding: 2rem 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        color: {text_color};
+        border-left: 5px solid #1f77b4;
+    ">
+        <h3 style="color: #1f77b4; margin-top: 0; margin-bottom: 1rem; font-size: 1.6rem;">
+            About this Screening
+        </h3>
+        
+        <p style="font-size: 1.05rem; line-height: 1.7; margin-bottom: 1.2rem; color: {text_color};">
+            This digital screening helps identify possible signs of 
+            <strong>depression</strong> and <strong>anxiety</strong> among Kenyan high school students.
+            It includes three short parts:
+        </p>
 
-        st.markdown(f"""
-        <div style="
-            background: {bg_card_color};
-            padding: 2rem 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            color: {text_color};
-            border-left: 5px solid #1f77b4;
-        ">
-            <h3 style="color: #1f77b4; margin-top: 0; margin-bottom: 1rem; font-size: 1.6rem;">
-                 About this Screening
-            </h3>
-            
-            <p style="font-size: 1.05rem; line-height: 1.7; margin-bottom: 1.2rem; color: {text_color};">
-                This digital screening helps identify possible signs of 
-                <strong>depression</strong> and <strong>anxiety</strong> among Kenyan high school students.
-                It includes three short parts:
-            </p>
-
-            <div style="margin-left: 1rem;">
-                <div style="margin-bottom: 1rem;">
-                    <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
-                         Demographics
-                    </h4>
-                    <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
-                        Basic background details such as your age, school type, and family situation. 
-                        These help the model understand how different environments and experiences may influence wellbeing.
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                    <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
-                         PHQ-8 (Depression Assessment)
-                    </h4>
-                    <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
-                        8 short questions about mood, motivation, sleep, and concentration over the past two weeks. 
-                        Each question uses the same 4-point scale: 
-                        <em>"Not at all", "Several days", "More than half the days", "Nearly every day"</em>.
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                    <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
-                         GAD-7 (Anxiety Assessment)
-                    </h4>
-                    <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
-                        7 questions focused on worry, restlessness, and tension, using the same 4-point response scale.
-                    </p>
-                </div>
+        <div style="margin-left: 1rem;">
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    Demographics
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    Basic background details such as your age, school type, and family situation. 
+                    These help the model understand how different environments and experiences may influence wellbeing.
+                </p>
             </div>
 
-            <div style="
-                background: rgba(31, 119, 180, 0.1);
-                padding: 1rem 1.2rem;
-                border-radius: 8px;
-                margin-top: 1.5rem;
-                border-left: 3px solid #1f77b4;
-            ">
-                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0; color: {text_color};">
-                    <strong> Note:</strong> Your responses are <strong>confidential</strong>. 
-                    The screening provides insight and awareness — <strong>not a formal diagnosis</strong>. 
-                    If you score high, you'll receive resources for support.
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    PHQ-8 (Depression Assessment)
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    8 short questions about mood, motivation, sleep, and concentration over the past two weeks. 
+                    Each question uses the same 4-point scale: 
+                    <em>"Not at all", "Several days", "More than half the days", "Nearly every day"</em>.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    GAD-7 (Anxiety Assessment)
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    7 questions focused on worry, restlessness, and tension, using the same 4-point response scale.
                 </p>
             </div>
         </div>
+
+        <div style="
+            background: rgba(31, 119, 180, 0.1);
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            border-left: 3px solid #1f77b4;
+        ">
+            <p style="font-size: 0.95rem; line-height: 1.6; margin: 0; color: {text_color};">
+                <strong>Note:</strong> Your responses are <strong>confidential</strong>. 
+                The screening provides insight and awareness — <strong>not a formal diagnosis</strong>. 
+                If you score high, you'll receive resources for support.
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+
+with tab1:
+    st.markdown("### School & Personal Information")
+    col1, col2 = st.columns(2)
+    with col1:
+        boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
+        school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
+        school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
+        school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"], key="school_county")
+        age = st.slider("Age", 12, 25, 16, key="age")
+        gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
+    with col2:
+        form = st.selectbox("Form", [1,2,3,4], key="form")
+        religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
+        parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
+        parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
+        fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"], key="fathers_edu")
+        mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"], key="mothers_edu")
+    col3, col4, col5 = st.columns(3)
+    with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
+    with col4: sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
+    with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
+    with tab2:
+        st.markdown("### PHQ-8 Depression Assessment")
+        st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
+        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+
+        phq_qs = [
+            "Little interest or pleasure in doing things",
+            "Feeling down, depressed, or hopeless",
+            "Trouble falling or staying asleep, or sleeping too much",
+            "Feeling tired or having little energy",
+            "Poor appetite or overeating",
+            "Feeling bad about yourself — or that you are a failure",
+            "Trouble concentrating on things",
+            "Moving or speaking slowly, or being fidgety"
+        ]
+        likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+
+        phq = {}
+        for i, q in enumerate(phq_qs, 1):
+            c1, c2 = st.columns([3,1])
+            with c1: 
+                st.markdown(f"**{i}.** {q}")
+            with c2:
+                phq[f'PHQ_{i}'] = st.select_slider(
+                    f"p{i}", 
+                    options=[0,1,2,3], 
+                    format_func=lambda x: likert[x], 
+                    label_visibility="collapsed", 
+                    key=f"phq_{i}"
+                )
+            st.markdown("---")
+
+        # Real-time calculation and display
+        phq_total = sum(phq.values())
+
+        # Determine severity category
+        if phq_total < 5:
+            phq_severity = "Minimal"
+            severity_class = "severity-minimal"
+        elif phq_total < 10:
+            phq_severity = "Mild"
+            severity_class = "severity-mild"
+        elif phq_total < 15:
+            phq_severity = "Moderate"
+            severity_class = "severity-moderate"
+        elif phq_total < 20:
+            phq_severity = "Moderately Severe"
+            severity_class = "severity-mod-severe"
+        else:
+            phq_severity = "Severe"
+            severity_class = "severity-severe"
+
+        # Display score and severity
+        st.markdown(f"""
+        <div class="{severity_class} severity-indicator">
+            <div style="font-size: 0.9rem; opacity: 0.8;">PHQ-8 Score</div>
+            <div class="score-display">{phq_total} / 24</div>
+            <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {phq_severity}</div>
+        </div>
         """, unsafe_allow_html=True)
 
-        tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+    with tab3:
+        st.markdown("### GAD-7 Anxiety Assessment")
+        st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms...")
+        st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
 
-        with tab1:
-            st.markdown("### School & Personal Information")
-            col1, col2 = st.columns(2)
-            with col1:
-                boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
-                school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
-                school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
-                school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"], key="school_county")
-                age = st.slider("Age", 12, 25, 16, key="age")
-                gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
-            with col2:
-                form = st.selectbox("Form", [1,2,3,4], key="form")
-                religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
-                parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
-                parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
-                fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"], key="fathers_edu")
-                mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"], key="mothers_edu")
-            col3, col4, col5 = st.columns(3)
-            with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
-            with col4: sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
-            with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
+        gad_qs = [
+            "Feeling nervous, anxious, or on edge",
+            "Not being able to stop or control worrying",
+            "Worrying too much about different things",
+            "Trouble relaxing",
+            "Being so restless that it is hard to sit still",
+            "Becoming easily annoyed or irritable",
+            "Feeling afraid as if something awful might happen"
+        ]
 
-        with tab2:
-            st.markdown("### PHQ-8 Depression Assessment")
-            st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
-            st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
+        gad = {}
+        for i, q in enumerate(gad_qs, 1):
+            c1, c2 = st.columns([3,1])
+            with c1: 
+                st.markdown(f"**{i}.** {q}")
+            with c2:
+                gad[f'GAD_{i}'] = st.select_slider(
+                    f"g{i}", 
+                    options=[0,1,2,3], 
+                    format_func=lambda x: likert[x], 
+                    label_visibility="collapsed", 
+                    key=f"gad_{i}"
+                )
+            st.markdown("---")
 
-            phq_qs = [
-                "Little interest or pleasure in doing things",
-                "Feeling down, depressed, or hopeless",
-                "Trouble falling or staying asleep, or sleeping too much",
-                "Feeling tired or having little energy",
-                "Poor appetite or overeating",
-                "Feeling bad about yourself — or that you are a failure",
-                "Trouble concentrating on things",
-                "Moving or speaking slowly, or being fidgety"
-            ]
-            likert = ["Not at all", "Several days", "More than half the days", "Nearly every day"]
+        # Real-time calculation and display
+        gad_total = sum(gad.values())
 
-            phq = {}
-            for i, q in enumerate(phq_qs, 1):
-                c1, c2 = st.columns([3,1])
-                with c1: 
-                    st.markdown(f"**{i}.** {q}")
-                with c2:
-                    phq[f'PHQ_{i}'] = st.select_slider(
-                        f"p{i}", 
-                        options=[0,1,2,3], 
-                        format_func=lambda x: likert[x], 
-                        label_visibility="collapsed", 
-                        key=f"phq_{i}"
-                    )
-                st.markdown("---")
+        # Determine severity category
+        if gad_total < 5:
+            gad_severity = "Minimal"
+            severity_class = "severity-minimal"
+        elif gad_total < 10:
+            gad_severity = "Mild"
+            severity_class = "severity-mild"
+        elif gad_total < 15:
+            gad_severity = "Moderate"
+            severity_class = "severity-moderate"
+        else:
+            gad_severity = "Severe"
+            severity_class = "severity-severe"
 
-            # Real-time calculation and display
-            phq_total = sum(phq.values())
+        # Display score and severity
+        st.markdown(f"""
+        <div class="{severity_class} severity-indicator">
+            <div style="font-size: 0.9rem; opacity: 0.8;">GAD-7 Score</div>
+            <div class="score-display">{gad_total} / 21</div>
+            <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {gad_severity}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            # Determine severity category
-            if phq_total < 5:
-                phq_severity = "Minimal"
-                severity_class = "severity-minimal"
-            elif phq_total < 10:
-                phq_severity = "Mild"
-                severity_class = "severity-mild"
-            elif phq_total < 15:
-                phq_severity = "Moderate"
-                severity_class = "severity-moderate"
-            elif phq_total < 20:
-                phq_severity = "Moderately Severe"
-                severity_class = "severity-mod-severe"
-            else:
-                phq_severity = "Severe"
-                severity_class = "severity-severe"
-
-            # Display score and severity
-            st.markdown(f"""
-            <div class="{severity_class} severity-indicator">
-                <div style="font-size: 0.9rem; opacity: 0.8;">PHQ-8 Score</div>
-                <div class="score-display">{phq_total} / 24</div>
-                <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {phq_severity}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with tab3:
-            st.markdown("### GAD-7 Anxiety Assessment")
-            st.markdown("**What is GAD-7?** The Generalized Anxiety Disorder-7 (GAD-7) is a quick, evidence-based questionnaire to assess anxiety symptoms...")
-            st.markdown('<div class="assessment-info">Remember: Your answers are private and used only for this screening.</div>', unsafe_allow_html=True)
-
-            gad_qs = [
-                "Feeling nervous, anxious, or on edge",
-                "Not being able to stop or control worrying",
-                "Worrying too much about different things",
-                "Trouble relaxing",
-                "Being so restless that it is hard to sit still",
-                "Becoming easily annoyed or irritable",
-                "Feeling afraid as if something awful might happen"
-            ]
-
-            gad = {}
-            for i, q in enumerate(gad_qs, 1):
-                c1, c2 = st.columns([3,1])
-                with c1: 
-                    st.markdown(f"**{i}.** {q}")
-                with c2:
-                    gad[f'GAD_{i}'] = st.select_slider(
-                        f"g{i}", 
-                        options=[0,1,2,3], 
-                        format_func=lambda x: likert[x], 
-                        label_visibility="collapsed", 
-                        key=f"gad_{i}"
-                    )
-                st.markdown("---")
-
-            # Real-time calculation and display
-            gad_total = sum(gad.values())
-
-            # Determine severity category
-            if gad_total < 5:
-                gad_severity = "Minimal"
-                severity_class = "severity-minimal"
-            elif gad_total < 10:
-                gad_severity = "Mild"
-                severity_class = "severity-mild"
-            elif gad_total < 15:
-                gad_severity = "Moderate"
-                severity_class = "severity-moderate"
-            else:
-                gad_severity = "Severe"
-                severity_class = "severity-severe"
-
-            # Display score and severity
-            st.markdown(f"""
-            <div class="{severity_class} severity-indicator">
-                <div style="font-size: 0.9rem; opacity: 0.8;">GAD-7 Score</div>
-                <div class="score-display">{gad_total} / 21</div>
-                <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {gad_severity}</div>
-            </div>
-            """, unsafe_allow_html=True)
 #  Submit
 # ----------------------------------------------------------------------
 st.markdown("---")
@@ -793,39 +796,43 @@ if submitted:
 
         # --- LIVE PREDICTIONS from all models ---
         st.markdown("---")
-        st.markdown("## Live Model Predictions & Real-time Metrics")
+        st.markdown("## Live Model Predictions and Real-time Metrics")
 
         if use_live_metrics:
             st.success(f"Computing live metrics on {len(test_data)} test samples")
         else:
-            st.info("ℹUsing pre-computed metrics (no test data available)")
+            st.info("ℹ Using pre-computed metrics (no test data available)")
 
         live_results = []
 
         progress_bar = st.progress(0)
         status_text = st.empty()
 
+        # Small container for warnings (collapsible)
+        with st.expander("View model processing logs", expanded=False):
+            log_placeholder = st.empty()
+
         for idx, (model_name, pipe) in enumerate(pipelines.items()):
             status_text.text(f"Processing {model_name}...")
             progress_bar.progress((idx + 1) / len(pipelines))
 
             try:
-                # Get live prediction for user
+                # --- Predict user input ---
                 prediction = pipe.predict(user_df)[0]
 
-                # Get probability scores if available
+                # --- Predict probabilities (safe) ---
                 try:
                     proba = pipe.predict_proba(user_df)[0]
                     dep_proba = proba[0][1] if len(proba[0]) > 1 else None
                     anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
-                except:
+                except Exception:
                     dep_proba = None
                     anx_proba = None
 
-                # Calculate LIVE metrics if test data available
+                # --- Calculate LIVE metrics if test data available ---
                 if use_live_metrics:
-                    dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0)
-                    anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1)
+                    dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0, model_name=model_name)
+                    anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1, model_name=model_name)
 
                     dep_recall = dep_metrics['recall']
                     dep_accuracy = dep_metrics['accuracy']
@@ -833,7 +840,7 @@ if submitted:
                     anx_accuracy = anx_metrics['accuracy']
                     metric_source = "LIVE"
                 else:
-                    # Fallback to stored metrics
+                    # Fallback to pre-stored metrics
                     metrics = model_metrics.get(model_name, {})
                     dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
                     dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
@@ -841,7 +848,7 @@ if submitted:
                     anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
                     metric_source = "STORED"
 
-                # Store results
+                # --- Store clean results ---
                 live_results.append({
                     'model_name': model_name,
                     'dep_prediction': int(prediction[0]),
@@ -856,11 +863,13 @@ if submitted:
                 })
 
             except Exception as e:
-                st.warning(f"Model {model_name} failed: {str(e)}")
+                log_placeholder.warning(f"Model **{model_name}** failed: {str(e)}")
                 continue
 
+        # Reset progress
         progress_bar.empty()
         status_text.empty()
+
 
         if not live_results:
             st.error("No models could generate predictions. Please check your model files.")
@@ -910,7 +919,7 @@ if submitted:
             <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
                         padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin:0; color: white;"> Anxiety Model</h3>
+                    <h3 style="margin:0; color: white; Anxiety Model</h3>
                     <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
                         {best_anx['metric_source']}
                     </span>
