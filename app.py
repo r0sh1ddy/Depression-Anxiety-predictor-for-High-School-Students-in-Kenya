@@ -16,7 +16,7 @@ if os.path.exists(TEST_DATA_FILE):
         else:
             test_data = pd.read_csv(TEST_DATA_FILE)
     except:
-        pass
+        passss
 
 
 # Add this function to calculate real-time metrics
@@ -459,53 +459,91 @@ with st.sidebar:
 if not st.session_state.submitted:
     st.markdown("## Complete the Screening")
 
-    # Adding introductory explanation for users
-    gradient_color = "#ffffff" 
+    text_color = "#2c3e50"
+    bg_card_color = "rgba(255,255,255,0.95)"  
+
     if st.session_state.background_style == "gradient_blue":
-        gradient_color = "#e8ecff"
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
     elif st.session_state.background_style == "gradient_green":
-        gradient_color = "#e6ffee"
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
+    elif st.session_state.background_style == "uploaded_image":
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
     else:
-        gradient_color = "#2c3e50"
+        text_color = "#2c3e50"
+        bg_card_color = "rgba(255,255,255,0.95)"
 
     st.markdown(f"""
     <div style="
-        background: rgba(255,255,255,0.15);
-        padding: 1.3rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-        color: {gradient_color};
+        background: {bg_card_color};
+        padding: 2rem 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        color: {text_color};
+        border-left: 5px solid #1f77b4;
     ">
-        <h4 style="color:{gradient_color}; margin-top:0;">About this Screening</h4>
-        <p style="font-size:1rem; line-height:1.6;">
+        <h3 style="color: #1f77b4; margin-top: 0; margin-bottom: 1rem; font-size: 1.6rem;">
+            About this Screening
+        </h3>
+        
+        <p style="font-size: 1.05rem; line-height: 1.7; margin-bottom: 1.2rem; color: {text_color};">
             This digital screening helps identify possible signs of 
             <strong>depression</strong> and <strong>anxiety</strong> among Kenyan high school students.
             It includes three short parts:
         </p>
 
-        <ul style="font-size:0.95rem; line-height:1.6;">
-            <li><strong>Demographics</strong>Basic background details such as your age, school type,
-            and family situation. These help the model understand how different environments and experiences
-            may influence wellbeing.</li>
+        <div style="margin-left: 1rem;">
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    Demographics
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    Basic background details such as your age, school type, and family situation. 
+                    These help the model understand how different environments and experiences may influence wellbeing.
+                </p>
+            </div>
 
-            <li><strong>PHQ-8 (Depression Assessment)</strong>8 short questions about mood, motivation,
-            sleep, and concentration over the past two weeks. Each question uses the same 4-point scale:
-            <em>"Not at all", "Several days", "More than half the days", "Nearly every day"</em>.</li>
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    PHQ-8 (Depression Assessment)
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    8 short questions about mood, motivation, sleep, and concentration over the past two weeks. 
+                    Each question uses the same 4-point scale: 
+                    <em>"Not at all", "Several days", "More than half the days", "Nearly every day"</em>.
+                </p>
+            </div>
 
-            <li><strong>GAD-7 (Anxiety Assessment)</strong>7 questions focused on worry, restlessness,
-            and tension, using the same 4-point response scale.</li>
-        </ul>
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #1f77b4; margin: 0.5rem 0; font-size: 1.1rem;">
+                    GAD-7 (Anxiety Assessment)
+                </h4>
+                <p style="font-size: 0.95rem; line-height: 1.6; margin: 0.3rem 0; color: {text_color};">
+                    7 questions focused on worry, restlessness, and tension, using the same 4-point response scale.
+                </p>
+            </div>
+        </div>
 
-        <p style="font-size:0.95rem; margin-top:1rem;">
-            <strong>Note:</strong> Your responses are <u>confidential</u>. The screening provides insight and 
-            awareness — not a formal diagnosis. If you score high, you’ll receive resources for support.
-        </p>
+        <div style="
+            background: rgba(31, 119, 180, 0.1);
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            border-left: 3px solid #1f77b4;
+        ">
+            <p style="font-size: 0.95rem; line-height: 1.6; margin: 0; color: {text_color};">
+                <strong>Note:</strong> Your responses are <strong>confidential</strong>. 
+                The screening provides insight and awareness — <strong>not a formal diagnosis</strong>. 
+                If you score high, you'll receive resources for support.
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-
-    tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
     with tab1:
         st.markdown("### School & Personal Information")
