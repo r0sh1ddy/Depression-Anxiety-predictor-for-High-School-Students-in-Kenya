@@ -681,7 +681,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
         return False
 
     if submitted and (phq_total >= 15 or gad_total >= 15):
-        st.error("###URGENT: High Score Detected")
+        st.error("### ⚠️ URGENT: High Score Detected")
         st.markdown("""
         **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
 
@@ -692,8 +692,6 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 # ----------------------------------------------------------------------
 #  Process Submission
 # ----------------------------------------------------------------------
-live_results = []
-
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
@@ -832,12 +830,14 @@ if submitted:
                         padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin:0; color: white;"> Depression Model</h3>
-                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">                        {best_dep['metric_source']}
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                        {best_dep['metric_source']}
+                    </span>
                 </div>
                 <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
                 <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
                     {best_dep['model_name']}
-                </div>.j
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
                     <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
                         <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
