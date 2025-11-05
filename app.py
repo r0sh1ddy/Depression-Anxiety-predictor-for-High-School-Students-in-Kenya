@@ -914,11 +914,13 @@ col1, col2 = st.columns(2)
 
 with col1:
     if not best_dep:
-    st.error("No valid depression model results to display.")
-    st.stop()
+        st.error("No valid depression model results to display.")
+        st.stop()
+    
     dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
     dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
     dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
+    
     st.markdown(f"""
     <div class="score-card" style="border-left:5px solid {dep_color}">
         <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
@@ -934,6 +936,7 @@ with col1:
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
     if best_dep['dep_probability'] is not None:
         st.metric(" Risk Probability", f"{best_dep['dep_probability']:.1%}",
                   help="Model's confidence in this prediction")
