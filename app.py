@@ -794,22 +794,24 @@ if submitted:
 
             except Exception as e:
                 log_placeholder.warning(f"Model **{model_name}** failed: {str(e)}")
-                continue
-
-        # Reset progress
+                continue# Reset progress
         progress_bar.empty()
         status_text.empty()
 
+        # --- SAFEGUARD: Ensure live_results always exists ---
+        if 'live_results' not in locals():
+            live_results = []
 
-        if not live_results:
-            st.error("No models could generate predictions. Please check your model files.")
+        # --- Handle missing or empty model results gracefully ---
+        if not live_results or len(live_results) == 0:
+            st.warning("ℹNo models have produced predictions yet. Please ensure your models are loaded and rerun the analysis.")
             st.stop()
 
         # --- SELECT BEST MODELS based on HIGHEST RECALL ---
-        best_dep = max(live_results, key=lambda x: x['dep_recall'])
-        best_anx = max(live_results, key=lambda x: x['anx_recall'])
+        best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
+        best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
 
-        st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0]['metric_source']}")
+        st.success(f" Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0].get('metric_source', 'N/A')}")
 
         # --- DISPLAY BEST MODEL SELECTIONS ---
         st.markdown("---")
