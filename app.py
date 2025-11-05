@@ -284,24 +284,22 @@ FAVICON_PATH = os.path.join(BASE, "app_images", "Adolescence.jpg")
 if os.path.exists(FAVICON_PATH):
     st.set_page_config(page_icon=FAVICON_PATH)
 
-if os.path.exists(LOGO_PATH):
-    st.markdown(f"""
-        <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
-            <img src="data:image/png;base64,{base64.b64encode(open(LOGO_PATH, 'rb').read()).decode()}" 
-                 width="90" style="border-radius:10px;"/>
-            <div>
-                <h1 style="margin:0; color:#1f77b4;">AdolescentMind</h1>
-                <p style="margin:0; color:#555; font-size:1.1rem;">
-                    Depression & Anxiety Screening for Kenyan High School Students
-                </p>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-else:
+# --- HEADER SECTION ---
+header_col1, header_col2 = st.columns([1, 5])  # adjust ratios for spacing
+
+with header_col1:
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=90)
+    else:
+        st.write("")  # empty space if no logo
+
+with header_col2:
     st.markdown(
         """
-        <h1 style='color:#1f77b4;'>AdolescentMind</h1>
-        <p style='color:#555; font-size:1.1rem;'>
+        <h1 style='margin-bottom:0; color:#1f77b4;'>
+            <strong>AdolescentMind</strong>
+        </h1>
+        <p style='margin-top:0; color:#555; font-size:1.1rem;'>
             Depression & Anxiety Screening for Kenyan High School Students
         </p>
         """,
