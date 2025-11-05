@@ -459,8 +459,7 @@ with st.sidebar:
 
 #  Form
 if not st.session_state.submitted:
-    st.markdown("## Complete the Screening")
-
+    st.markdown("---")
     st.markdown("""
     ### About this Screening
     
@@ -474,6 +473,7 @@ if not st.session_state.submitted:
     
     **Note:** Your responses are confidential. The screening provides insight and awareness — not a formal diagnosis. If you score high, you'll receive resources for support.
     """)
+    st.markdown("## Complete the Screening")
 
 tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
