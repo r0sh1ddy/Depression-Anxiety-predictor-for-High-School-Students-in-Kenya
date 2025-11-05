@@ -469,7 +469,8 @@ with st.sidebar:
     st.markdown("---")
     st.info("**Recall** measures ability to identify students who may need support.")
 
-#  Form
+# Form
+# Form
 if not st.session_state.submitted:
     st.markdown("---")
     st.markdown("""
@@ -487,34 +488,34 @@ if not st.session_state.submitted:
     """)
     st.markdown("## Complete the Screening")
 
-tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+    tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
 
-with tab1:
-st.markdown("### School & Personal Information")
-col1, col2 = st.columns(2)
-with col1:
-    boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
-    school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
-    school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
-    school_county = st.selectbox("County", ["Nairobi", "Kiambu", "Makueni", "Machakos"], key="school_county")
-    age = st.slider("Age", 12, 25, 16, key="age")
-    gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
+    with tab1:
+        st.markdown("### School & Personal Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
+            school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
+            school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
+            school_county = st.selectbox("County", ["Nairobi", "Kiambu", "Makueni", "Machakos"], key="school_county")
+            age = st.slider("Age", 12, 25, 16, key="age")
+            gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
 
-with col2:
-    form = st.selectbox("Form", [1, 2, 3, 4], key="form")
-    religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
-    parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
-    parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
-    fathers_edu = st.selectbox("Father's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="fathers_edu")
-    mothers_edu = st.selectbox("Mother's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="mothers_edu")
+        with col2:
+            form = st.selectbox("Form", [1, 2, 3, 4], key="form")
+            religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
+            parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
+            parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
+            fathers_edu = st.selectbox("Father's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="fathers_edu")
+            mothers_edu = st.selectbox("Mother's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="mothers_edu")
 
-col3, col4, col5 = st.columns(3)
-with col3:
-    co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
-with col4:
-    sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
-with col5:
-    acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
+        with col4:
+            sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
+        with col5:
+            acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
 
     with tab2:
         st.markdown("### PHQ-8 Depression Assessment")
@@ -535,15 +536,15 @@ with col5:
 
         phq = {}
         for i, q in enumerate(phq_qs, 1):
-            c1, c2 = st.columns([3,1])
-            with c1: 
+            c1, c2 = st.columns([3, 1])
+            with c1:
                 st.markdown(f"**{i}.** {q}")
             with c2:
                 phq[f'PHQ_{i}'] = st.select_slider(
-                    f"p{i}", 
-                    options=[0,1,2,3], 
-                    format_func=lambda x: likert[x], 
-                    label_visibility="collapsed", 
+                    f"p{i}",
+                    options=[0, 1, 2, 3],
+                    format_func=lambda x: likert[x],
+                    label_visibility="collapsed",
                     key=f"phq_{i}"
                 )
             st.markdown("---")
@@ -594,15 +595,15 @@ with col5:
 
         gad = {}
         for i, q in enumerate(gad_qs, 1):
-            c1, c2 = st.columns([3,1])
-            with c1: 
+            c1, c2 = st.columns([3, 1])
+            with c1:
                 st.markdown(f"**{i}.** {q}")
             with c2:
                 gad[f'GAD_{i}'] = st.select_slider(
-                    f"g{i}", 
-                    options=[0,1,2,3], 
-                    format_func=lambda x: likert[x], 
-                    label_visibility="collapsed", 
+                    f"g{i}",
+                    options=[0, 1, 2, 3],
+                    format_func=lambda x: likert[x],
+                    label_visibility="collapsed",
                     key=f"gad_{i}"
                 )
             st.markdown("---")
@@ -632,6 +633,7 @@ with col5:
             <div style="font-size: 1.2rem; margin-top: 0.5rem;">Severity: {gad_severity}</div>
         </div>
         """, unsafe_allow_html=True)
+
 
 #  Submit
 # ----------------------------------------------------------------------
