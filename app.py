@@ -698,121 +698,121 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 
 
 #  Process Submission
-    if submitted:
-        with st.spinner("Running live predictions and calculating real-time metrics"):
-            # --- Clean input ---
-            edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
-            input_data = {
-                "Boarding_day": boarding_day,
-                "School_type": school_type,
-                "School_Demographics": school_demo,
-                "School_County": school_county,
-                "Age": int(age),
-                "Gender": 1 if gender == "Male" else 2,
-                "Form": int(form),
-                "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
-                "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
-                "Parents_Dead": int(parents_dead),
-                "Fathers_Education": edu_map.get(fathers_edu, 0),
-                "Mothers_Education": edu_map.get(mothers_edu, 0),
-                "Co_Curricular": 1 if co_curr == "Yes" else 0,
-                "Sports": 1 if sports == "Yes" else 0,
-                "Percieved_Academic_Abilities": int(acad_ability)
-            }
-            input_data.update(phq)
-            input_data.update(gad)
-            user_df = pd.DataFrame([input_data])
+if submitted:
+    with st.spinner("Running live predictions and calculating real-time metrics"):
+        # --- Clean input ---
+        edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
+        input_data = {
+            "Boarding_day": boarding_day,
+            "School_type": school_type,
+            "School_Demographics": school_demo,
+            "School_County": school_county,
+            "Age": int(age),
+            "Gender": 1 if gender == "Male" else 2,
+            "Form": int(form),
+            "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
+            "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
+            "Parents_Dead": int(parents_dead),
+            "Fathers_Education": edu_map.get(fathers_edu, 0),
+            "Mothers_Education": edu_map.get(mothers_edu, 0),
+            "Co_Curricular": 1 if co_curr == "Yes" else 0,
+            "Sports": 1 if sports == "Yes" else 0,
+            "Percieved_Academic_Abilities": int(acad_ability)
+        }
+        input_data.update(phq)
+        input_data.update(gad)
+        user_df = pd.DataFrame([input_data])
 
-            # --- Prepare test data if available ---
-            use_live_metrics = test_data is not None
+        # --- Prepare test data if available ---
+        use_live_metrics = test_data is not None
 
-            if use_live_metrics:
-                target_cols = ['Is_Depressed', 'Has_anxiety']
-                feature_cols = [col for col in test_data.columns if col not in target_cols]
-                X_test = test_data[feature_cols]
-                y_test = test_data[target_cols].values
+        if use_live_metrics:
+            target_cols = ['Is_Depressed', 'Has_anxiety']
+            feature_cols = [col for col in test_data.columns if col not in target_cols]
+            X_test = test_data[feature_cols]
+            y_test = test_data[target_cols].values
 
-            # --- LIVE PREDICTIONS from all models ---
-            st.markdown("---")
-            st.markdown("## Live Model Predictions and Real-time Metrics")
+        # --- LIVE PREDICTIONS from all models ---
+        st.markdown("---")
+        st.markdown("## Live Model Predictions and Real-time Metrics")
 
-            if use_live_metrics:
-                st.success(f"Computing live metrics on {len(test_data)} test samples")
-            else:
-                st.info("ℹ Using pre-computed metrics (no test data available)")
+        if use_live_metrics:
+            st.success(f"Computing live metrics on {len(test_data)} test samples")
+        else:
+            st.info("ℹ Using pre-computed metrics (no test data available)")
 
-            live_results = []
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+        live_results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
-            with st.expander("View model processing logs", expanded=False):
-                log_placeholder = st.empty()
+        with st.expander("View model processing logs", expanded=False):
+            log_placeholder = st.empty()
 
-            for idx, (model_name, pipe) in enumerate(pipelines.items()):
-                status_text.text(f"Processing {model_name}...")
-                progress_bar.progress((idx + 1) / len(pipelines))
+        for idx, (model_name, pipe) in enumerate(pipelines.items()):
+            status_text.text(f"Processing {model_name}...")
+            progress_bar.progress((idx + 1) / len(pipelines))
+
+            try:
+                prediction = pipe.predict(user_df)[0]
 
                 try:
-                    prediction = pipe.predict(user_df)[0]
+                    proba = pipe.predict_proba(user_df)[0]
+                    dep_proba = proba[0][1] if len(proba[0]) > 1 else None
+                    anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
+                except Exception:
+                    dep_proba = None
+                    anx_proba = None
 
-                    try:
-                        proba = pipe.predict_proba(user_df)[0]
-                        dep_proba = proba[0][1] if len(proba[0]) > 1 else None
-                        anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
-                    except Exception:
-                        dep_proba = None
-                        anx_proba = None
+                if use_live_metrics:
+                    dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0, model_name=model_name)
+                    anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1, model_name=model_name)
+                    dep_recall = dep_metrics['recall']
+                    dep_accuracy = dep_metrics['accuracy']
+                    anx_recall = anx_metrics['recall']
+                    anx_accuracy = anx_metrics['accuracy']
+                    metric_source = "LIVE"
+                else:
+                    metrics = model_metrics.get(model_name, {})
+                    dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
+                    dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+                    anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
+                    anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+                    metric_source = "STORED"
 
-                    if use_live_metrics:
-                        dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0, model_name=model_name)
-                        anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1, model_name=model_name)
-                        dep_recall = dep_metrics['recall']
-                        dep_accuracy = dep_metrics['accuracy']
-                        anx_recall = anx_metrics['recall']
-                        anx_accuracy = anx_metrics['accuracy']
-                        metric_source = "LIVE"
-                    else:
-                        metrics = model_metrics.get(model_name, {})
-                        dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
-                        dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
-                        anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
-                        anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
-                        metric_source = "STORED"
+                live_results.append({
+                    'model_name': model_name,
+                    'dep_prediction': int(prediction[0]),
+                    'anx_prediction': int(prediction[1]) if len(prediction) > 1 else None,
+                    'dep_probability': dep_proba,
+                    'anx_probability': anx_proba,
+                    'dep_recall': dep_recall,
+                    'dep_accuracy': dep_accuracy,
+                    'anx_recall': anx_recall,
+                    'anx_accuracy': anx_accuracy,
+                    'metric_source': metric_source
+                })
 
-                    live_results.append({
-                        'model_name': model_name,
-                        'dep_prediction': int(prediction[0]),
-                        'anx_prediction': int(prediction[1]) if len(prediction) > 1 else None,
-                        'dep_probability': dep_proba,
-                        'anx_probability': anx_proba,
-                        'dep_recall': dep_recall,
-                        'dep_accuracy': dep_accuracy,
-                        'anx_recall': anx_recall,
-                        'anx_accuracy': anx_accuracy,
-                        'metric_source': metric_source
-                    })
+            except Exception as e:
+                log_placeholder.warning(f"Model **{model_name}** failed: {str(e)}")
+                continue
 
-                except Exception as e:
-                    log_placeholder.warning(f"Model **{model_name}** failed: {str(e)}")
-                    continue
+        progress_bar.empty()
+        status_text.empty()
 
-            progress_bar.empty()
-            status_text.empty()
+        if not live_results:
+            st.warning("ℹ No models produced predictions. Please check your setup.")
+            st.stop()
 
-            if not live_results:
-                st.warning("ℹ No models produced predictions. Please check your setup.")
-                st.stop()
+        # --- SELECT BEST MODELS ---
+        best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
+        best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
 
-            # --- SELECT BEST MODELS ---
-            best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
-            best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
+        # --- Save into session state ---
+        st.session_state.live_results = live_results
+        st.session_state.best_dep = best_dep
+        st.session_state.best_anx = best_anx
 
-            # --- Save into session state ---
-            st.session_state.live_results = live_results
-            st.session_state.best_dep = best_dep
-            st.session_state.best_anx = best_anx
-
-            st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0].get('metric_source', 'N/A')}")
+        st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0].get('metric_source', 'N/A')}")
 
 
         # --- DISPLAY BEST MODEL SELECTIONS ---
@@ -911,14 +911,12 @@ final_anx_score = min(gad_total + demo_score_anx, 21)
 dep_cat = "Minimal" if final_dep_score < 5 else "Mild" if final_dep_score < 10 else "Moderate" if final_dep_score < 15 else "Moderately Severe" if final_dep_score < 20 else "Severe"
 anx_cat = "Minimal" if final_anx_score < 5 else "Mild" if final_anx_score < 10 else "Moderate" if final_anx_score < 15 else "Severe"
 
-# --------------------------------------------------------------------
-# DISPLAY RESULTS (Session-State Safe)
-# --------------------------------------------------------------------
-if 'live_results' in st.session_state and len(st.session_state.live_results) > 0:
+# DISPLAY RESULTS 
+if st.session_state.get('live_results') and len(st.session_state.live_results) > 0:
     best_dep = st.session_state.best_dep
     best_anx = st.session_state.best_anx
 else:
-    st.error("No valid model predictions were generated yet. Please click **Run Screening** to start analysis.")
+    st.error("No valid model predictions were generated. Please check your inputs or model setup.")
     best_dep = {'dep_prediction': 0, 'dep_probability': 0, 'model_name': 'N/A'}
     best_anx = {'anx_prediction': 0, 'anx_probability': 0, 'model_name': 'N/A'}
 
