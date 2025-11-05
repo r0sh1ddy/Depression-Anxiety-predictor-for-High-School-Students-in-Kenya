@@ -915,7 +915,7 @@ col1, col2 = st.columns(2)
 with col1:
     if not best_dep:
     st.error("No valid depression model results to display.")
-    st.stop()s
+    st.stop()
     dep_risk = "POSITIVE (At Risk)" if best_dep['dep_prediction'] == 1 else "NEGATIVE (Low Risk)"
     dep_color = "#e74c3c" if best_dep['dep_prediction'] == 1 else "#27ae60"
     dep_icon = "🔴" if best_dep['dep_prediction'] == 1 else "🟢"
