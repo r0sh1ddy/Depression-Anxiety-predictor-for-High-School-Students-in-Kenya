@@ -681,7 +681,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
         return False
 
     if submitted and (phq_total >= 15 or gad_total >= 15):
-        st.error("### ⚠️ URGENT: High Score Detected")
+        st.error("### URGENT: High Score Detected")
         st.markdown("""
         **[Immediate support is recommended - Click for help resources](https://www.healthyplace.com/other-info/resources/mental-health-hotline-numbers-and-referral-resources)**
 
@@ -689,9 +689,11 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
         """)
         st.markdown("---")
 
-# ----------------------------------------------------------------------
+
 #  Process Submission
-# ----------------------------------------------------------------------
+live_results = []
+best_dep = {}
+best_anx = {}
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
