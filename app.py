@@ -487,7 +487,7 @@ if not st.session_state.submitted:
     """)
     st.markdown("## Complete the Screening")
 
-tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7
+tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
     st.markdown("### School & Personal Information")
     col1, col2 = st.columns(2)
     with col1:
