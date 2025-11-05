@@ -3,7 +3,6 @@ import pandas as pd
 import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import plotly.express as px
 
 BASE = os.path.dirname(__file__)
 TEST_DATA_FILE = os.path.join(BASE, "test_data.csv")
@@ -710,9 +709,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
         # --- Clean input ---
-        # --- Clean input ---
-        edu_map = {"None": 0, "Primary": 1, "Secondary": 2, "Tertiary": 3, "University": 4}
-
+        edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
         input_data = {
             "Boarding_day": boarding_day,
             "School_type": school_type,
@@ -722,7 +719,7 @@ if submitted:
             "Gender": 1 if gender == "Male" else 2,
             "Form": int(form),
             "Religion": 1 if religion == "Christian" else 2 if religion == "Muslim" else 3,
-            "Parents_Home": {"None": 0, "One parent": 1, "Both parents": 2}.get(parents_home, 0),
+            "Parents_Home": {"None":0, "One parent":1, "Both parents":2}.get(parents_home, 0),
             "Parents_Dead": int(parents_dead),
             "Fathers_Education": edu_map.get(fathers_edu, 0),
             "Mothers_Education": edu_map.get(mothers_edu, 0),
@@ -730,14 +727,9 @@ if submitted:
             "Sports": 1 if sports == "Yes" else 0,
             "Percieved_Academic_Abilities": int(acad_ability)
         }
-
-        # Include PHQ and GAD responses
         input_data.update(phq)
         input_data.update(gad)
-
-        # Create a single-row DataFrame for this user (used for prediction + PCA decoding + SHAP-style visualization)
         user_df = pd.DataFrame([input_data])
-
 
         # --- Prepare test data if available ---
         use_live_metrics = test_data is not None
@@ -1038,183 +1030,122 @@ with col2:
 # --------------------------------------------------------------------
 # DYNAMIC FEATURE IMPORTANCE (Color-coded by SHAP sign)
 # --------------------------------------------------------------------
-
-
-# --- Header and Info ---
-st.markdown("---")
-st.markdown("### Key Factors Influencing Your Results")
-st.info(
-    "Each bar shows how strongly a factor affected your score — "
-    "🟥 red increases risk, 🟩 green reduces it. "
-    "The ⭐ symbol highlights your most influential factor. "
-    "Switch between **Depression** and **Anxiety** below."
-)
-
-tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
-
-# --- Readable feature labels ---
-label_map = {
-    "Gender": "Gender",
-    "Age": "Age",
-    "Form": "Form (Class Level)",
-    "Religion": "Religion",
-    "Parents_Home": "Parental Presence at Home",
-    "Parents_Dead": "Number of Deceased Parents",
-    "Fathers_Education": "Father’s Education Level",
-    "Mothers_Education": "Mother’s Education Level",
-    "Co_Curricular": "Co-curricular Involvement",
-    "Sports": "Sports Participation",
-    "Percieved_Academic_Abilities": "Self-rated Academic Ability",
-    "Boarding_day": "School Type (Boarding/Day)",
-    "School_type": "School Gender (Boys/Girls/Mixed)",
-    "School_Demographics": "School Category",
-    "School_County": "School County",
-}
-
-# --- PCA to human explanation map ---
-pca_human_expl = {
-    "num__pca0": "Emotional symptoms (GAD_1, GAD_2, GAD_3)",
-    "num__pca1": "Academic confidence and age level",
-    "num__pca2": "Parental presence and parental education",
-    "num__pca3": "Family background and loss experiences",
-    "num__pca4": "Sports participation and extracurricular balance",
-    "num__pca5": "Religious and social activity balance",
-    "num__pca6": "Sports and emotional expression (PHQ_1)",
-    "num__pca7": "Gender influence and emotional response",
-    "num__pca8": "Emotional stability and gender-related differences",
-    "num__pca9": "Religious coping and emotional strain",
-    "num__pca10": "Gender and stress symptoms (PHQ_8, PHQ_4)",
-    "num__pca11": "Sports engagement and social involvement",
-    "num__pca12": "Academic and gender-related emotional strength",
-    "num__pca13": "Fatigue and emotional exhaustion indicators",
-    "num__pca14": "Anxiety patterns and academic self-perception",
-    "num__pca15": "Combined stress and anxiety indicators",
-    "num__pca16": "Gender-linked emotional control",
-    "num__pca17": "Academic pressure and anxiety synergy",
-}
-
-def prettify_feature_name(feat):
-    base = feat.split("__")[-1]
-    base = base.replace("_Male", " (Male)").replace("_Female", " (Female)")
-    base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
-    if feat in pca_human_expl:
-        return pca_human_expl[feat]
-    return label_map.get(base, base.replace("_", " ").title())
-
-# --- Main visualization function ---
-def show_feature_importance_signed(model_name, title_label):
-    try:
-        pipe = pipelines.get(model_name)
-        if not pipe:
-            st.info(f"No data available for {title_label}.")
-            return
-
-        pre = pipe.named_steps['preprocessor']
-        clf = pipe.named_steps['clf']
-        X = pre.transform(user_df)
-        if hasattr(X, "toarray"):
-            X = X.toarray()
-        feat_names = list(pre.get_feature_names_out())
-
-        # get signed importances
-        if hasattr(clf, "coef_"):
-            imp_values = clf.coef_[0]
-        elif hasattr(clf, "feature_importances_"):
-            imp_values = clf.feature_importances_
-        else:
-            imp_values = np.random.randn(len(feat_names))
-
-        df = pd.DataFrame({
-            "Feature": feat_names,
-            "Impact": np.abs(imp_values),
-            "Direction": np.sign(imp_values)
-        })
-        df["Readable"] = df["Feature"].apply(prettify_feature_name)
-        df["Color"] = df["Direction"].apply(lambda x: "Risk ↑ (Red)" if x > 0 else "Protective ↓ (Green)")
-        df["Explanation"] = df["Color"].replace({
-            "Risk ↑ (Red)": "This factor increased the predicted risk.",
-            "Protective ↓ (Green)": "This factor helped reduce the predicted risk."
-        })
-
-        top5 = df.sort_values("Impact", ascending=False).head(5)
-        top_driver = top5.iloc[top5["Impact"].idxmax()]  # most influential
-
-        # --- Base bar chart ---
-        fig = px.bar(
-            top5, x="Impact", y="Readable", orientation="h",
-            title=f"Top 5 Influential Factors — {title_label}",
-            color="Direction",
-            color_continuous_scale=["green", "white", "red"],
-            text_auto=".2f",
-            hover_data={
-                "Readable": True,
-                "Impact": ":.2f",
-                "Explanation": True
-            },
-        )
-
-        # --- Add top-driver marker annotation ---
-        fig.add_annotation(
-            x=top_driver["Impact"],
-            y=top_driver["Readable"],
-            text="⭐ Most Influential",
-            showarrow=False,
-            font=dict(size=14, color="gold", family="Arial Black"),
-            bgcolor="rgba(255,255,255,0.8)",
-            bordercolor="gold",
-            borderwidth=1,
-            xanchor="left",
-            yanchor="middle"
-        )
-
-        # --- Layout polish ---
-        fig.update_layout(
-            height=360,
-            margin=dict(l=20, r=20, t=50, b=20),
-            hoverlabel=dict(
-                bgcolor="rgba(255,255,255,0.95)",
-                font_size=13,
-                font_color="black",
-                font_family="Arial"
-            ),
-            xaxis_title="Influence Strength",
-            yaxis_title=None,
-            title_font=dict(size=18),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-        st.warning(f"Could not display importance: {e}")
-
-# --- Tabs for Depression & Anxiety ---
-with tab_fd:
-    show_feature_importance_signed(best_dep["model_name"], "Depression")
-
-with tab_fa:
-    show_feature_importance_signed(best_anx["model_name"], "Anxiety")
-
-
-# --------------------------------------------------------------------
-# ALERT LOGIC (Combined Scores)
-# --------------------------------------------------------------------
-if final_dep_score >= 15 or final_anx_score >= 15:
     st.markdown("---")
-    st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
-    st.markdown("""
-    **Your combined scores indicate significant distress. Please reach out for help immediately.**
+    st.markdown("### Key Factors Influencing Your Results")
+    st.info(
+        "Each bar shows how strongly a factor affected your score — "
+        "🟥 red increases risk, 🟩 green reduces it. "
+        "Switch between **Depression** and **Anxiety** below."
+    )
 
-    **Crisis Support Lines (Kenya):**
-    - Kenya Red Cross: 1199  
-    - Befrienders Kenya: +254 722 178 177  
-    - Lifeline Kenya: 1195  
-    """)
-elif final_dep_score >= 10 or final_anx_score >= 10:
-    st.warning(" Moderate levels detected — consider talking to a counselor or trusted teacher.")
-else:
-    st.success(" Low-risk range detected — continue healthy coping strategies.")
+    tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
+
+    import numpy as np, pandas as pd, plotly.express as px
+
+    # readable feature labels
+    label_map = {
+        "Gender": "Gender",
+        "Age": "Age",
+        "Form": "Form (Class Level)",
+        "Religion": "Religion",
+        "Parents_Home": "Parental Presence at Home",
+        "Parents_Dead": "Number of Deceased Parents",
+        "Fathers_Education": "Father’s Education Level",
+        "Mothers_Education": "Mother’s Education Level",
+        "Co_Curricular": "Co-curricular Involvement",
+        "Sports": "Sports Participation",
+        "Percieved_Academic_Abilities": "Self-rated Academic Ability",
+        "Boarding_day": "School Type (Boarding/Day)",
+        "School_type": "School Gender (Boys/Girls/Mixed)",
+        "School_Demographics": "School Category",
+        "School_County": "School County",
+    }
+
+    def prettify_feature_name(feat):
+        base = feat.split("__")[-1]
+        base = base.replace("_Male", " (Male)").replace("_Female", " (Female)")
+        base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
+        return label_map.get(base, base.replace("_", " ").title())
+
+    def show_feature_importance_signed(model_name, title_label):
+        try:
+            pipe = pipelines.get(model_name)
+            if not pipe:
+                st.info(f"No data available for {title_label}.")
+                return
+            pre = pipe.named_steps['preprocessor']
+            clf = pipe.named_steps['clf']
+            X = pre.transform(user_df)
+            if hasattr(X, "toarray"):
+                X = X.toarray()
+            feat_names = list(pre.get_feature_names_out())
+
+            # attempt SHAP or model coefficients for sign
+            if hasattr(clf, "coef_"):
+                imp_values = clf.coef_[0]
+            elif hasattr(clf, "feature_importances_"):
+                imp_values = clf.feature_importances_
+            else:
+                imp_values = np.random.randn(len(feat_names))
+
+            df = pd.DataFrame({
+                "Feature": feat_names,
+                "Impact": np.abs(imp_values),
+                "Direction": np.sign(imp_values)
+            })
+            df["Readable"] = df["Feature"].apply(prettify_feature_name)
+            df["Color"] = df["Direction"].apply(lambda x: "Risk ↑ (Red)" if x > 0 else "Protective ↓ (Green)")
+            df["Explanation"] = df["Color"].replace({
+                "Risk ↑ (Red)": "This factor increased the predicted risk.",
+                "Protective ↓ (Green)": "This factor helped reduce the predicted risk."
+            })
+
+            top5 = df.sort_values("Impact", ascending=False).head(5)
+            fig = px.bar(
+                top5, x="Impact", y="Readable", orientation="h",
+                title=f"Top 5 Influential Factors — {title_label}",
+                color="Direction",
+                color_continuous_scale=["green", "white", "red"],
+                text_auto=".2f",
+                hover_data={
+                    "Readable": True,
+                    "Impact": ":.2f",
+                    "Explanation": True
+                },
+            )
+            fig.update_layout(
+                height=340, margin=dict(l=20, r=20, t=40, b=20),
+                hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial"),
+                xaxis_title="Influence Strength",
+                yaxis_title=None,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Could not display importance: {e}")
+
+    with tab_fd:
+        show_feature_importance_signed(best_dep['model_name'], "Depression")
+    with tab_fa:
+        show_feature_importance_signed(best_anx['model_name'], "Anxiety")
+
+    # --------------------------------------------------------------------
+    # ALERT LOGIC (Combined Scores)
+    # --------------------------------------------------------------------
+    if final_dep_score >= 15 or final_anx_score >= 15:
+        st.markdown("---")
+        st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
+        st.markdown("""
+        **Your combined scores indicate significant distress. Please reach out for help immediately.**
+
+        **Crisis Support Lines (Kenya):**
+        - Kenya Red Cross: 1199  
+        - Befrienders Kenya: +254 722 178 177  
+        - Lifeline Kenya: 1195  
+        """)
+    elif final_dep_score >= 10 or final_anx_score >= 10:
+        st.warning(" Moderate levels detected — consider talking to a counselor or trusted teacher.")
+    else:
+        st.success(" Low-risk range detected — continue healthy coping strategies.")
 
 # --------------------------------------------------------------------
 # DOWNLOAD REPORT (Combined Results)
