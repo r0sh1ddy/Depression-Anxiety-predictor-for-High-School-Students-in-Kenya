@@ -934,11 +934,21 @@ col1, col2 = st.columns(2)
 
 with col1:
     dep_pred_val = best_dep.get('dep_prediction', 0)
-    dep_risk = "POSITIVE (At Risk)" if dep_pred_val == 1 else "NEGATIVE (Low Risk)"
-    dep_color = "#e74c3c" if dep_pred_val == 1 else "#27ae60"
-    dep_icon = "🔴" if dep_pred_val == 1 else "🟢"
-    dep_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)" if dep_pred_val == 1 else "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
-    
+
+    # Show red only when severity is Moderate or higher
+    if dep_cat in ["Moderate", "Moderately Severe", "Severe"]:
+        dep_risk = "POSITIVE (At Risk)"
+        dep_color = "#e74c3c"
+        dep_icon = "🔴"
+        dep_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)"
+        show_dep_proba = True
+    else:
+        dep_risk = "NEGATIVE (Low Risk)"
+        dep_color = "#27ae60"
+        dep_icon = "🟢"
+        dep_bg = "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
+        show_dep_proba = False
+
     st.markdown(f"""
     <div class="score-card" style="
         border-left:6px solid {dep_color};
@@ -962,18 +972,29 @@ with col1:
     </div>
     """, unsafe_allow_html=True)
 
+    # Show probability only if at risk
     dep_proba_val = best_dep.get('dep_probability')
-    if dep_proba_val is not None:
+    if show_dep_proba and dep_proba_val is not None:
         st.metric("Risk Probability", f"{dep_proba_val:.1%}",
                   help="Model's confidence in this prediction")
 
 with col2:
     anx_pred_val = best_anx.get('anx_prediction', 0)
-    anx_risk = "POSITIVE (At Risk)" if anx_pred_val == 1 else "NEGATIVE (Low Risk)"
-    anx_color = "#e74c3c" if anx_pred_val == 1 else "#27ae60"
-    anx_icon = "🔴" if anx_pred_val == 1 else "🟢"
-    anx_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)" if anx_pred_val == 1 else "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
-    
+
+    # Show red only when severity is Moderate or higher
+    if anx_cat in ["Moderate", "Severe"]:
+        anx_risk = "POSITIVE (At Risk)"
+        anx_color = "#e74c3c"
+        anx_icon = "🔴"
+        anx_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)"
+        show_anx_proba = True
+    else:
+        anx_risk = "NEGATIVE (Low Risk)"
+        anx_color = "#27ae60"
+        anx_icon = "🟢"
+        anx_bg = "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
+        show_anx_proba = False
+
     st.markdown(f"""
     <div class="score-card" style="
         border-left:6px solid {anx_color};
@@ -997,10 +1018,12 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
+    # Show probability only if at risk
     anx_proba_val = best_anx.get('anx_probability')
-    if anx_proba_val is not None:
+    if show_anx_proba and anx_proba_val is not None:
         st.metric("Risk Probability", f"{anx_proba_val:.1%}",
                   help="Model's confidence in this prediction")
+
 
 
 
