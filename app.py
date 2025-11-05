@@ -5,7 +5,7 @@ import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 BASE = os.path.dirname(__file__)
-TEST_DATA_FILE = os.path.join(BASE, "test_data.csv") 
+TEST_DATA_FILE = os.path.join(BASE, "test_data.csv")
 
 test_data = None
 if os.path.exists(TEST_DATA_FILE):
@@ -13,13 +13,10 @@ if os.path.exists(TEST_DATA_FILE):
         if TEST_DATA_FILE.endswith('.pkl'):
             with open(TEST_DATA_FILE, "rb") as f:
                 test_data = pickle.load(f)
-        else:  # CSV
+        else:
             test_data = pd.read_csv(TEST_DATA_FILE)
-        st.sidebar.success()
-    except Exception as e:
-        st.sidebar.error()
-else:
-    st.sidebar.warning()
+    except:
+        pass
 
 
 # Add this function to calculate real-time metrics
