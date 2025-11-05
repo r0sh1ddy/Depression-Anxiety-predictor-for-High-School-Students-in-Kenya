@@ -488,26 +488,34 @@ if not st.session_state.submitted:
     st.markdown("## Complete the Screening")
 
 tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
+
+with tab1:
     st.markdown("### School & Personal Information")
     col1, col2 = st.columns(2)
     with col1:
         boarding_day = st.selectbox("School Type", ["Boarding", "Day"], key="boarding_day")
         school_type = st.selectbox("School Gender", ["Boys", "Girls", "Mixed"], key="school_type")
         school_demo = st.selectbox("School Level", ['Subcounty', 'Extracounty', 'County'], key="school_demo")
-        school_county = st.selectbox("County", ["Nairobi","Kiambu","Makueni","Machakos"], key="school_county")
+        school_county = st.selectbox("County", ["Nairobi", "Kiambu", "Makueni", "Machakos"], key="school_county")
         age = st.slider("Age", 12, 25, 16, key="age")
         gender = st.selectbox("Gender", ["Male", "Female"], key="gender")
+
     with col2:
-        form = st.selectbox("Form", [1,2,3,4], key="form")
+        form = st.selectbox("Form", [1, 2, 3, 4], key="form")
         religion = st.selectbox("Religion", ["Christian", "Muslim", "Other"], key="religion")
         parents_home = st.selectbox("Parents at Home", ["Both parents", "One parent", "None"], key="parents_home")
         parents_dead = st.number_input("Deceased Parents", 0, 4, 0, key="parents_dead")
-        fathers_edu = st.selectbox("Father's Education", ["None","Primary","Secondary","Tertiary","University"], key="fathers_edu")
-        mothers_edu = st.selectbox("Mother's Education", ["None","Primary","Secondary","Tertiary","University"], key="mothers_edu")
+        fathers_edu = st.selectbox("Father's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="fathers_edu")
+        mothers_edu = st.selectbox("Mother's Education", ["None", "Primary", "Secondary", "Tertiary", "University"], key="mothers_edu")
+
     col3, col4, col5 = st.columns(3)
-    with col3: co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
-    with col4: sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
-    with col5: acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
+    with col3:
+        co_curr = st.selectbox("Co-curricular", ["Yes", "No"], key="co_curr")
+    with col4:
+        sports = st.selectbox("Sports", ["Yes", "No"], key="sports")
+    with col5:
+        acad_ability = st.slider("Academic Self-Rating", 1, 5, 3, key="acad_ability")
+
     with tab2:
         st.markdown("### PHQ-8 Depression Assessment")
         st.markdown("**What is PHQ-8?** The Patient Health Questionnaire-8 (PHQ-8) is a simple, validated tool to screen for depression symptoms over the past 2 weeks...")
