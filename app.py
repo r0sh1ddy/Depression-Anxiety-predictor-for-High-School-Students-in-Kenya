@@ -691,7 +691,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 
 
 #  Process Submission
-live_results = []
+
 
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
