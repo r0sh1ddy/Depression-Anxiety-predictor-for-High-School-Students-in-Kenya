@@ -487,9 +487,7 @@ if not st.session_state.submitted:
     """)
     st.markdown("## Complete the Screening")
 
-tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7"])
-
-with tab1:
+tab1, tab2, tab3 = st.tabs(["Demographics", "PHQ-8", "GAD-7
     st.markdown("### School & Personal Information")
     col1, col2 = st.columns(2)
     with col1:
@@ -838,11 +836,11 @@ if submitted:
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
                     <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
                         <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
-                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep['dep_recall']:.1%}</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep.get('dep_recall', 0):.1%}</div>
                     </div>
                     <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
                         <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
-                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep['dep_accuracy']:.1%}</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep.get('dep_accuracy',0):.1%}</div>
                     </div>
                 </div>
             </div>
@@ -855,21 +853,21 @@ if submitted:
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin:0; color: white; Anxiety Model</h3>
                     <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
-                        {best_anx['metric_source']}
+                        {best_anx.get('metric_source',0)}
                     </span>
                 </div>
                 <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
                 <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
-                    {best_anx['model_name']}
+                    {best_anx.get('model_name',0)}
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
                     <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
                         <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
-                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx['anx_recall']:.1%}</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx.get('anx_recall',0):.1%}</div>
                     </div>
                     <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
                         <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
-                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx['anx_accuracy']:.1%}</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx.get('anx_accuracy',0):.1%}</div>
                     </div>
                 </div>
             </div>
@@ -913,66 +911,87 @@ anx_cat = "Minimal" if final_anx_score < 5 else "Mild" if final_anx_score < 10 e
 
 # DISPLAY RESULTS 
 if st.session_state.get('live_results') and len(st.session_state.live_results) > 0:
-    best_dep = st.session_state.best_dep
-    best_anx = st.session_state.best_anx
+    best_dep = max(st.session_state.live_results, key=lambda x: x.get('dep_recall', 0))
+    best_anx = max(st.session_state.live_results, key=lambda x: x.get('anx_recall', 0))
 else:
-    st.error("No valid model predictions were generated. Please check your inputs or model setup.")
+    # fallback
     best_dep = {'dep_prediction': 0, 'dep_probability': 0, 'model_name': 'N/A'}
     best_anx = {'anx_prediction': 0, 'anx_probability': 0, 'model_name': 'N/A'}
 
 
+
 col1, col2 = st.columns(2)
 
-with col1:
-    dep_pred_val = best_dep.get('dep_prediction', 0)
-    dep_risk = "POSITIVE (At Risk)" if dep_pred_val == 1 else "NEGATIVE (Low Risk)"
-    dep_color = "#e74c3c" if dep_pred_val == 1 else "#27ae60"
-    dep_icon = "🔴" if dep_pred_val == 1 else "🟢"
-    
-    st.markdown(f"""
-    <div class="score-card" style="border-left:5px solid {dep_color}">
-        <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
-        <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
-        <div class="score-label">{dep_cat}</div>
-        <div style="font-size:0.9rem;color:#777;">Combined Score (with Demographics): {final_dep_score:.1f}/24</div>
-        <hr style="margin: 1rem 0;">
-        <div style="font-size: 1.3rem; font-weight: bold; color: {dep_color}; margin: 0.5rem 0;">
-            {dep_icon} {dep_risk}
+    with col1:
+        dep_pred_val = best_dep.get('dep_prediction', 0)
+        dep_risk = "POSITIVE (At Risk)" if dep_pred_val == 1 else "NEGATIVE (Low Risk)"
+        dep_color = "#e74c3c" if dep_pred_val == 1 else "#27ae60"
+        dep_icon = "🔴" if dep_pred_val == 1 else "🟢"
+        dep_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)" if dep_pred_val == 1 else "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
+        
+        st.markdown(f"""
+        <div class="score-card" style="
+            border-left:6px solid {dep_color};
+            box-shadow: 0 0 12px {dep_color}44;
+            background: {dep_bg};
+        ">
+            <h3 style="margin:0;color:#1f77b4">PHQ-8 Depression</h3>
+            <div class="score-number">{phq_total}<span style="font-size:2rem;color:#666">/24</span></div>
+            <div class="score-label">{dep_cat}</div>
+            <div style="font-size:1rem;color:#333;margin-top:0.3rem;">
+                <b>Combined Score (with Demographics):</b> 
+                <span style="color:{dep_color}; font-weight:bold;">{final_dep_score:.1f}/24</span>
+            </div>
+            <hr style="margin: 1rem 0;">
+            <div style="font-size: 1.3rem; font-weight: bold; color: {dep_color}; margin: 0.5rem 0;">
+                {dep_icon} {dep_risk}
+            </div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #ffffffaa; padding: 0.5rem; border-radius: 6px;">
+                <strong>Model:</strong> {best_dep.get('model_name', 'N/A')[:35]}{"..." if len(best_dep.get('model_name', '')) > 35 else ""}
+            </div>
         </div>
-        <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
-            <strong>Model:</strong> {best_dep['model_name'][:35]}{"..." if len(best_dep['model_name']) > 35 else ""}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    dep_proba_val = best_dep.get('dep_probability')
-    if dep_proba_val is not None:
-        st.metric("Risk Probability", f"{dep_proba_val:.1%}",
-                  help="Model's confidence in this prediction")
+        """, unsafe_allow_html=True)
 
+        dep_proba_val = best_dep.get('dep_probability')
+        if dep_proba_val is not None:
+            st.metric("Risk Probability", f"{dep_proba_val:.1%}",
+                    help="Model's confidence in this prediction")
 
-with col2:
-    anx_risk = "POSITIVE (At Risk)" if best_anx['anx_prediction'] == 1 else "NEGATIVE (Low Risk)"
-    anx_color = "#e74c3c" if best_anx['anx_prediction'] == 1 else "#27ae60"
-    anx_icon = "🔴" if best_anx['anx_prediction'] == 1 else "🟢"
-    st.markdown(f"""
-    <div class="score-card" style="border-left:5px solid {anx_color}">
-        <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
-        <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
-        <div class="score-label">{anx_cat}</div>
-        <div style="font-size:0.9rem;color:#777;">Combined Score (with Demographics): {final_anx_score:.1f}/21</div>
-        <hr style="margin: 1rem 0;">
-        <div style="font-size: 1.3rem; font-weight: bold; color: {anx_color}; margin: 0.5rem 0;">
-            {anx_icon} {anx_risk}
+    with col2:
+        anx_pred_val = best_anx.get('anx_prediction', 0)
+        anx_risk = "POSITIVE (At Risk)" if anx_pred_val == 1 else "NEGATIVE (Low Risk)"
+        anx_color = "#e74c3c" if anx_pred_val == 1 else "#27ae60"
+        anx_icon = "🔴" if anx_pred_val == 1 else "🟢"
+        anx_bg = "linear-gradient(135deg, #fce4e4 0%, #fdecea 100%)" if anx_pred_val == 1 else "linear-gradient(135deg, #eafaf1 0%, #e8f5e9 100%)"
+        
+        st.markdown(f"""
+        <div class="score-card" style="
+            border-left:6px solid {anx_color};
+            box-shadow: 0 0 12px {anx_color}44;
+            background: {anx_bg};
+        ">
+            <h3 style="margin:0;color:#ff7f0e">GAD-7 Anxiety</h3>
+            <div class="score-number">{gad_total}<span style="font-size:2rem;color:#666">/21</span></div>
+            <div class="score-label">{anx_cat}</div>
+            <div style="font-size:1rem;color:#333;margin-top:0.3rem;">
+                <b>Combined Score (with Demographics):</b> 
+                <span style="color:{anx_color}; font-weight:bold;">{final_anx_score:.1f}/21</span>
+            </div>
+            <hr style="margin: 1rem 0;">
+            <div style="font-size: 1.3rem; font-weight: bold; color: {anx_color}; margin: 0.5rem 0;">
+                {anx_icon} {anx_risk}
+            </div>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #ffffffaa; padding: 0.5rem; border-radius: 6px;">
+                <strong>Model:</strong> {best_anx.get('model_name', 'N/A')[:35]}{"..." if len(best_anx.get('model_name', '')) > 35 else ""}
+            </div>
         </div>
-        <div style="font-size: 0.85rem; color: #666; margin-top: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 6px;">
-            <strong>Model:</strong> {best_anx['model_name'][:35]}{"..." if len(best_anx['model_name']) > 35 else ""}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    if best_anx['anx_probability'] is not None:
-        st.metric("Risk Probability", f"{best_anx['anx_probability']:.1%}",
-                  help="Model's confidence in this prediction")
+        """, unsafe_allow_html=True)
+
+        anx_proba_val = best_anx.get('anx_probability')
+        if anx_proba_val is not None:
+            st.metric("Risk Probability", f"{anx_proba_val:.1%}",
+                    help="Model's confidence in this prediction")
+
 
 # --------------------------------------------------------------------
 # DYNAMIC FEATURE IMPORTANCE (Color-coded by SHAP sign)
