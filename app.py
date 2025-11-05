@@ -284,23 +284,30 @@ FAVICON_PATH = os.path.join(BASE, "app_images", "Adolescence.jpg")
 if os.path.exists(FAVICON_PATH):
     st.set_page_config(page_icon=FAVICON_PATH)
 
-# Header
-col1, col2, col3 = st.columns([1, 3, 1])
-with col2:
-    if os.path.exists(LOGO_PATH):
-        st.image(
-            LOGO_PATH,
-            width=280,
-            use_container_width=False,
-            caption=None
-        )
-    else:
-        st.markdown('<div class="main-header">AdolescentMind</div>', unsafe_allow_html=True)
+if os.path.exists(LOGO_PATH):
+    st.markdown(f"""
+        <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+            <img src="data:image/png;base64,{base64.b64encode(open(LOGO_PATH, 'rb').read()).decode()}" 
+                 width="90" style="border-radius:10px;"/>
+            <div>
+                <h1 style="margin:0; color:#1f77b4;">AdolescentMind</h1>
+                <p style="margin:0; color:#555; font-size:1.1rem;">
+                    Depression & Anxiety Screening for Kenyan High School Students
+                </p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(
+        """
+        <h1 style='color:#1f77b4;'>AdolescentMind</h1>
+        <p style='color:#555; font-size:1.1rem;'>
+            Depression & Anxiety Screening for Kenyan High School Students
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
-st.markdown(
-    '<div class="sub-header">Depression & Anxiety Screening for Kenyan High School Students</div>',
-    unsafe_allow_html=True
-)
 
 #  Load models
 PIPELINE_FILE = os.path.join(BASE, "trained_pipelines.pkl")
