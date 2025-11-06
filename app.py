@@ -3,7 +3,6 @@ import pandas as pd
 import pickle, os, numpy as np
 import shap, matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import logging
 
 BASE = os.path.dirname(__file__)
 TEST_DATA_FILE = os.path.join(BASE, "test_data.csv")
@@ -20,36 +19,36 @@ if os.path.exists(TEST_DATA_FILE):
         passss
 
 
-
+# FINAL SAFE VERSION — handles binary/multiclass + skips failed models
 def calculate_live_metrics(model, X_test, y_test, target_idx, model_name="Unknown Model"):
     from sklearn.metrics import recall_score, accuracy_score
     import numpy as np
     import streamlit as st
 
     try:
-
+        # --- Get predictions safely ---
         y_pred = model.predict(X_test)
 
-
+        # Handle multi-output predictions
         if len(np.shape(y_pred)) > 1:
             y_pred_target = y_pred[:, target_idx]
         else:
             y_pred_target = y_pred
 
-
+        # Handle multi-output ground truth
         if len(np.shape(y_test)) > 1:
             y_test_target = y_test[:, target_idx]
         else:
             y_test_target = y_test
 
-
+        # --- Auto-detect label structure ---
         unique_labels = np.unique(y_test_target)
         if len(unique_labels) > 2:
             recall = recall_score(y_test_target, y_pred_target, average='macro', zero_division=0)
         else:
             recall = recall_score(y_test_target, y_pred_target, average='binary', zero_division=0)
 
-
+        # --- Accuracy ---
         accuracy = accuracy_score(y_test_target, y_pred_target)
 
         return {
@@ -291,13 +290,15 @@ FAVICON_PATH = os.path.join(BASE, "app_images", "Adolescence.jpg")
 
 if os.path.exists(FAVICON_PATH):
     st.set_page_config(page_icon=FAVICON_PATH)
-header_col1, header_col2 = st.columns([1, 5])  
+
+# --- HEADER SECTION ---
+header_col1, header_col2 = st.columns([1, 5])  # adjust ratios for spacing
 
 with header_col1:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=90)
     else:
-        st.write("")  
+        st.write("")  # empty space if no logo
 
 with header_col2:
     st.markdown(
@@ -468,7 +469,7 @@ with st.sidebar:
     st.markdown("---")
     st.info("**Recall** measures ability to identify students who may need support.")
 
-
+# Form
 # Form
 if not st.session_state.submitted:
     st.markdown("---")
@@ -634,14 +635,16 @@ if not st.session_state.submitted:
         """, unsafe_allow_html=True)
 
 
-
-# Submit
+#  Submit
+# ----------------------------------------------------------------------
 st.markdown("---")
 _, c, _ = st.columns([1,2,1])
 with c:
     submitted = st.button("Run Screening", use_container_width=True)
 
-
+# ----------------------------------------------------------------------
+#  SHAP Function
+# ----------------------------------------------------------------------
 def generate_shap_plot(pipe, user_df, target_idx, title):
     try:
         pre = pipe.named_steps['preprocessor']
@@ -705,7 +708,7 @@ def generate_shap_plot(pipe, user_df, target_idx, title):
 #  Process Submission
 if submitted:
     with st.spinner("Running live predictions and calculating real-time metrics"):
-
+        # --- Clean input ---
         edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
         input_data = {
             "Boarding_day": boarding_day,
@@ -728,7 +731,7 @@ if submitted:
         input_data.update(gad)
         user_df = pd.DataFrame([input_data])
 
-
+        # --- Prepare test data if available ---
         use_live_metrics = test_data is not None
 
         if use_live_metrics:
@@ -737,84 +740,160 @@ if submitted:
             X_test = test_data[feature_cols]
             y_test = test_data[target_cols].values
 
-        # predictions from all models 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+        # --- LIVE PREDICTIONS from all models ---
+        st.markdown("---")
+        st.markdown("## Live Model Predictions and Real-time Metrics")
 
-try:
-    live_results = []
-    if use_live_metrics:
-        logging.info(f"Computing live metrics on input samples")
-    else:
-        logging.info("Using precomputed metrics (no test data available).")
+        if use_live_metrics:
+            st.success(f"Computing live metrics on {len(test_data)} test samples")
+        else:
+            st.info("ℹ Using pre-computed metrics (no test data available)")
 
-    for idx, (model_name, pipe) in enumerate(pipelines.items()):
-        try:
-            prediction = pipe.predict(user_df)[0]
+        live_results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        with st.expander("View model processing logs", expanded=False):
+            log_placeholder = st.empty()
+
+        for idx, (model_name, pipe) in enumerate(pipelines.items()):
+            status_text.text(f"Processing {model_name}...")
+            progress_bar.progress((idx + 1) / len(pipelines))
 
             try:
-                proba = pipe.predict_proba(user_df)[0]
-                dep_proba = proba[0][1] if len(proba[0]) > 1 else None
-                anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
-            except Exception:
-                dep_proba = None
-                anx_proba = None
+                prediction = pipe.predict(user_df)[0]
 
-            if use_live_metrics:
-                dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0, model_name=model_name)
-                anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1, model_name=model_name)
-                dep_recall = dep_metrics['recall']
-                dep_accuracy = dep_metrics['accuracy']
-                anx_recall = anx_metrics['recall']
-                anx_accuracy = anx_metrics['accuracy']
-            else:
-                metrics = model_metrics.get(model_name, {})
-                dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
-                dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
-                anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
-                anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+                try:
+                    proba = pipe.predict_proba(user_df)[0]
+                    dep_proba = proba[0][1] if len(proba[0]) > 1 else None
+                    anx_proba = proba[1][1] if len(proba) > 1 and len(proba[1]) > 1 else None
+                except Exception:
+                    dep_proba = None
+                    anx_proba = None
 
-            live_results.append({
-                'model_name': model_name,
-                'dep_prediction': int(prediction[0]),
-                'anx_prediction': int(prediction[1]) if len(prediction) > 1 else None,
-                'dep_probability': dep_proba,
-                'anx_probability': anx_proba,
-                'dep_recall': dep_recall,
-                'dep_accuracy': dep_accuracy,
-                'anx_recall': anx_recall,
-                'anx_accuracy': anx_accuracy,
-            })
+                if use_live_metrics:
+                    dep_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=0, model_name=model_name)
+                    anx_metrics = calculate_live_metrics(pipe, X_test, y_test, target_idx=1, model_name=model_name)
+                    dep_recall = dep_metrics['recall']
+                    dep_accuracy = dep_metrics['accuracy']
+                    anx_recall = anx_metrics['recall']
+                    anx_accuracy = anx_metrics['accuracy']
+                    metric_source = "LIVE"
+                else:
+                    metrics = model_metrics.get(model_name, {})
+                    dep_recall = metrics.get('test_recall_per_target', {}).get('Is_Depressed', 0)
+                    dep_accuracy = metrics.get('test_accuracy_per_target', {}).get('Is_Depressed', 0)
+                    anx_recall = metrics.get('test_recall_per_target', {}).get('Has_anxiety', 0)
+                    anx_accuracy = metrics.get('test_accuracy_per_target', {}).get('Has_anxiety', 0)
+                    metric_source = "STORED"
 
-        except Exception as e:
-            logging.warning(f"Model {model_name} failed: {e}")
-            continue
+                live_results.append({
+                    'model_name': model_name,
+                    'dep_prediction': int(prediction[0]),
+                    'anx_prediction': int(prediction[1]) if len(prediction) > 1 else None,
+                    'dep_probability': dep_proba,
+                    'anx_probability': anx_proba,
+                    'dep_recall': dep_recall,
+                    'dep_accuracy': dep_accuracy,
+                    'anx_recall': anx_recall,
+                    'anx_accuracy': anx_accuracy,
+                    'metric_source': metric_source
+                })
 
-    # Best model selection 
-    best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
-    best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
+            except Exception as e:
+                log_placeholder.warning(f"Model **{model_name}** failed: {str(e)}")
+                continue
 
-    
-    st.session_state.live_results = live_results
-    st.session_state.best_dep = best_dep
-    st.session_state.best_anx = best_anx
+        progress_bar.empty()
+        status_text.empty()
 
-    # Log silently for your backend visibility
-    logging.info("Best Depression Model: %s | Recall=%.3f | Acc=%.3f",
-                 best_dep['model_name'], best_dep['dep_recall'], best_dep['dep_accuracy'])
-    logging.info("Best Anxiety Model: %s | Recall=%.3f | Acc=%.3f",
-                 best_anx['model_name'], best_anx['anx_recall'], best_anx['anx_accuracy'])
+        if not live_results:
+            st.warning("ℹ No models produced predictions. Please check your setup.")
+            st.stop()
 
-except Exception as e:
-    logging.error("Hidden main metrics section failed: %s", e)
-# View results
+        # --- SELECT BEST MODELS ---
+        best_dep = max(live_results, key=lambda x: x.get('dep_recall', 0))
+        best_anx = max(live_results, key=lambda x: x.get('anx_recall', 0))
+
+        # --- Save into session state ---
+        st.session_state.live_results = live_results
+        st.session_state.best_dep = best_dep
+        st.session_state.best_anx = best_anx
+
+        st.success(f"Generated predictions from {len(live_results)} model(s) | Metrics: {live_results[0].get('metric_source', 'N/A')}")
+
+
+        # --- DISPLAY BEST MODEL SELECTIONS ---
+        st.markdown("---")
+        st.markdown("## Selected Best Models (Highest Recall)")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0; color: white;"> Depression Model</h3>
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                        {best_dep['metric_source']}
+                    </span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
+                <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
+                    {best_dep['model_name']}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep.get('dep_recall', 0):.1%}</div>
+                    </div>
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_dep.get('dep_accuracy',0):.1%}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+                        padding: 1.5rem; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0; color: white; Anxiety Model</h3>
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                        {best_anx.get('metric_source',0)}
+                    </span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.3); margin: 1rem 0;">
+                <div style="font-size: 1rem; font-weight: bold; margin: 0.8rem 0; line-height: 1.4;">
+                    {best_anx.get('model_name',0)}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem;">
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Recall</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx.get('anx_recall',0):.1%}</div>
+                    </div>
+                    <div style="text-align: center; background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 0.3rem;">Accuracy</div>
+                        <div style="font-size: 1.9rem; font-weight: bold;">{best_anx.get('anx_accuracy',0):.1%}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # --- LIVE PREDICTION RESULTS ---
         st.markdown("---")
         st.markdown("## Your Screening Results")
 
-
+# --------------------------------------------------------------------
+# COMBINED ASSESSMENTS (Depression & Anxiety using PHQ/GAD + Demographics)
+# --------------------------------------------------------------------
 
 edu_map = {"None":0, "Primary":1, "Secondary":2, "Tertiary":3, "University":4}
 
-# Depression Demographic Weighting 
+# --- Depression Demographic Weighting (subtle influence) ---
 demo_score_dep = 0
 if parents_home == "None": demo_score_dep += 1.0
 elif parents_home == "One parent": demo_score_dep += 0.5
@@ -825,7 +904,7 @@ if boarding_day == "Boarding": demo_score_dep += 0.3
 demo_score_dep = min(demo_score_dep, 3)
 final_dep_score = min(phq_total + demo_score_dep, 24)
 
-# Anxiety Demographic Weighting 
+# --- Anxiety Demographic Weighting (subtle influence) ---
 demo_score_anx = 0
 if gender == "Female": demo_score_anx += 0.5
 if sports == "No": demo_score_anx += 0.5
@@ -836,11 +915,11 @@ elif parents_home == "None": demo_score_anx += 1.0
 demo_score_anx = min(demo_score_anx, 3)
 final_anx_score = min(gad_total + demo_score_anx, 21)
 
-#  Severity categories 
+# --- Severity categories ---
 dep_cat = "Minimal" if final_dep_score < 5 else "Mild" if final_dep_score < 10 else "Moderate" if final_dep_score < 15 else "Moderately Severe" if final_dep_score < 20 else "Severe"
 anx_cat = "Minimal" if final_anx_score < 5 else "Mild" if final_anx_score < 10 else "Moderate" if final_anx_score < 15 else "Severe"
 
-# Display results
+# DISPLAY RESULTS 
 if st.session_state.get('live_results') and len(st.session_state.live_results) > 0:
     best_dep = max(st.session_state.live_results, key=lambda x: x.get('dep_recall', 0))
     best_anx = max(st.session_state.live_results, key=lambda x: x.get('anx_recall', 0))
@@ -945,7 +1024,7 @@ with col2:
         st.metric("Risk Probability", f"{anx_proba_val:.1%}",
                   help="Model's confidence in this prediction")
                 
-# Feature importance shap explanation
+# DYNAMIC FEATURE IMPORTANCE Color-coded by SHAP sign
 st.markdown("---")
 st.markdown("### Key Factors Influencing Your Results")
 st.info(
@@ -958,7 +1037,7 @@ tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
 
 import numpy as np, pandas as pd, plotly.express as px
 
-# PCA decoding
+# PCA HUMAN MEANING — YOU PROVIDED THIS
 PCA_EXPLANATION = {
     "num__pca0":  "General Anxiety Pattern (Worry & Restlessness)",
     "num__pca1":  "Academic Confidence & School Level",
@@ -999,7 +1078,7 @@ label_map = {
     "School_County": "School County",
 }
 
-# Convert technical names  human meaning
+# Convert technical names → human meaning
 def prettify_feature_name(feat):
     if feat in PCA_EXPLANATION:
         return PCA_EXPLANATION[feat]
@@ -1008,7 +1087,7 @@ def prettify_feature_name(feat):
     base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
     return label_map.get(base, base.replace("_", " ").title())
 
-# readable tooltips
+# Plotter with readable tooltips
 def show_feature_importance_signed(model_name, title_label):
     try:
         pipe = pipelines.get(model_name)
@@ -1073,7 +1152,9 @@ with tab_fa:
     show_feature_importance_signed(best_anx['model_name'], "Anxiety")
 
 
-
+    # --------------------------------------------------------------------
+    # ALERT LOGIC (Combined Scores)
+    # --------------------------------------------------------------------
     if final_dep_score >= 15 or final_anx_score >= 15:
         st.markdown("---")
         st.error("### HIGH SCORE ALERT - IMMEDIATE SUPPORT RECOMMENDED")
@@ -1090,7 +1171,9 @@ with tab_fa:
     else:
         st.success(" Low-risk range detected — continue healthy coping strategies.")
 
-
+# --------------------------------------------------------------------
+# DOWNLOAD REPORT (Combined Results)
+# --------------------------------------------------------------------
 st.markdown("---")
 report = f"""
 SCREENING RESULTS
@@ -1116,7 +1199,7 @@ st.download_button("⬇️ Download Combined Results Report",
                    mime="text/plain")
 
 
-# Disclaimer
+# --- Disclaimer ---
 st.markdown("---")
 st.warning("""
 **SCREENING ONLY**  
