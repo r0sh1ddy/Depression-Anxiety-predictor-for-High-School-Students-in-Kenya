@@ -1023,110 +1023,134 @@ with col2:
     if show_anx_proba and anx_proba_val is not None:
         st.metric("Risk Probability", f"{anx_proba_val:.1%}",
                   help="Model's confidence in this prediction")
+                
+# DYNAMIC FEATURE IMPORTANCE Color-coded by SHAP sign
+st.markdown("---")
+st.markdown("### Key Factors Influencing Your Results")
+st.info(
+    "Each bar shows how strongly a factor affected your score — "
+    "🟥 red increases risk, 🟩 green reduces it. "
+    "Switch between **Depression** and **Anxiety** below."
+)
 
+tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
 
+import numpy as np, pandas as pd, plotly.express as px
 
+# PCA HUMAN MEANING — YOU PROVIDED THIS
+PCA_EXPLANATION = {
+    "num__pca0":  "General Anxiety Pattern (Worry & Restlessness)",
+    "num__pca1":  "Academic Confidence & School Level",
+    "num__pca2":  "Family Support & Stability",
+    "num__pca3":  "Home Guidance & Loss Experience",
+    "num__pca4":  "Participation & Activity (Sports / Clubs)",
+    "num__pca5":  "Community & Spiritual Influence",
+    "num__pca6":  "Mood & Energy Regulation",
+    "num__pca7":  "Restlessness & Social Expression",
+    "num__pca8":  "Body & Emotional Response",
+    "num__pca9":  "Coping Through Belief & Emotion",
+    "num__pca10": "Self-Esteem & Emotional Energy",
+    "num__pca11": "Fatigue & Support System",
+    "num__pca12": "Mood Stability & Self-worth",
+    "num__pca13": "Irritability & Tension Reaction",
+    "num__pca14": "Worry & Academic Pressure",
+    "num__pca15": "Low Mood & Stress Sensitivity",
+    "num__pca16": "Emotional Regulation & Restlessness",
+    "num__pca17": "Performance Pressure & Worry Cycle"
+}
 
-# --------------------------------------------------------------------
-# DYNAMIC FEATURE IMPORTANCE (Color-coded by SHAP sign)
-# --------------------------------------------------------------------
-    st.markdown("---")
-    st.markdown("### Key Factors Influencing Your Results")
-    st.info(
-        "Each bar shows how strongly a factor affected your score — "
-        "🟥 red increases risk, 🟩 green reduces it. "
-        "Switch between **Depression** and **Anxiety** below."
-    )
+# Normal feature labels (non-PCA)
+label_map = {
+    "Gender": "Gender",
+    "Age": "Age",
+    "Form": "School Class Level",
+    "Religion": "Religion",
+    "Parents_Home": "Parental Presence at Home",
+    "Parents_Dead": "Number of Deceased Parents",
+    "Fathers_Education": "Father’s Education Level",
+    "Mothers_Education": "Mother’s Education Level",
+    "Co_Curricular": "Participation in Clubs",
+    "Sports": "Sports Participation",
+    "Percieved_Academic_Abilities": "Self-rated Academic Ability",
+    "Boarding_day": "School Type (Boarding/Day)",
+    "School_type": "School Gender (Boys/Girls/Mixed)",
+    "School_Demographics": "School Category",
+    "School_County": "School County",
+}
 
-    tab_fd, tab_fa = st.tabs(["Depression Factors", "Anxiety Factors"])
+# Convert technical names → human meaning
+def prettify_feature_name(feat):
+    if feat in PCA_EXPLANATION:
+        return PCA_EXPLANATION[feat]
+    base = feat.split("__")[-1]
+    base = base.replace("_Male", " (Male)").replace("_Female", " (Female)")
+    base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
+    return label_map.get(base, base.replace("_", " ").title())
 
-    import numpy as np, pandas as pd, plotly.express as px
+# Plotter with readable tooltips
+def show_feature_importance_signed(model_name, title_label):
+    try:
+        pipe = pipelines.get(model_name)
+        if not pipe:
+            st.info(f"No data available for {title_label}.")
+            return
 
-    # readable feature labels
-    label_map = {
-        "Gender": "Gender",
-        "Age": "Age",
-        "Form": "Form (Class Level)",
-        "Religion": "Religion",
-        "Parents_Home": "Parental Presence at Home",
-        "Parents_Dead": "Number of Deceased Parents",
-        "Fathers_Education": "Father’s Education Level",
-        "Mothers_Education": "Mother’s Education Level",
-        "Co_Curricular": "Co-curricular Involvement",
-        "Sports": "Sports Participation",
-        "Percieved_Academic_Abilities": "Self-rated Academic Ability",
-        "Boarding_day": "School Type (Boarding/Day)",
-        "School_type": "School Gender (Boys/Girls/Mixed)",
-        "School_Demographics": "School Category",
-        "School_County": "School County",
-    }
+        pre = pipe.named_steps['preprocessor']
+        clf = pipe.named_steps['clf']
 
-    def prettify_feature_name(feat):
-        base = feat.split("__")[-1]
-        base = base.replace("_Male", " (Male)").replace("_Female", " (Female)")
-        base = base.replace("_Yes", " (Yes)").replace("_No", " (No)")
-        return label_map.get(base, base.replace("_", " ").title())
+        X = pre.transform(user_df)
+        if hasattr(X, "toarray"):
+            X = X.toarray()
 
-    def show_feature_importance_signed(model_name, title_label):
-        try:
-            pipe = pipelines.get(model_name)
-            if not pipe:
-                st.info(f"No data available for {title_label}.")
-                return
-            pre = pipe.named_steps['preprocessor']
-            clf = pipe.named_steps['clf']
-            X = pre.transform(user_df)
-            if hasattr(X, "toarray"):
-                X = X.toarray()
-            feat_names = list(pre.get_feature_names_out())
+        feat_names = list(pre.get_feature_names_out())
 
-            # attempt SHAP or model coefficients for sign
-            if hasattr(clf, "coef_"):
-                imp_values = clf.coef_[0]
-            elif hasattr(clf, "feature_importances_"):
-                imp_values = clf.feature_importances_
-            else:
-                imp_values = np.random.randn(len(feat_names))
+        if hasattr(clf, "coef_"):
+            imp_values = clf.coef_[0]
+        elif hasattr(clf, "feature_importances_"):
+            imp_values = clf.feature_importances_
+        else:
+            imp_values = np.random.randn(len(feat_names))
 
-            df = pd.DataFrame({
-                "Feature": feat_names,
-                "Impact": np.abs(imp_values),
-                "Direction": np.sign(imp_values)
-            })
-            df["Readable"] = df["Feature"].apply(prettify_feature_name)
-            df["Color"] = df["Direction"].apply(lambda x: "Risk ↑ (Red)" if x > 0 else "Protective ↓ (Green)")
-            df["Explanation"] = df["Color"].replace({
-                "Risk ↑ (Red)": "This factor increased the predicted risk.",
-                "Protective ↓ (Green)": "This factor helped reduce the predicted risk."
-            })
+        df = pd.DataFrame({
+            "Feature": feat_names,
+            "Impact": np.abs(imp_values),
+            "Direction": np.sign(imp_values)
+        })
+        df["Readable"] = df["Feature"].apply(prettify_feature_name)
+        df["Color"] = df["Direction"].apply(lambda x: "Risk ↑ (Red)" if x > 0 else "Protective ↓ (Green)")
+        df["Explanation"] = df["Color"].replace({
+            "Risk ↑ (Red)": "This factor increased the predicted risk.",
+            "Protective ↓ (Green)": "This factor helped reduce the predicted risk."
+        })
 
-            top5 = df.sort_values("Impact", ascending=False).head(5)
-            fig = px.bar(
-                top5, x="Impact", y="Readable", orientation="h",
-                title=f"Top 5 Influential Factors — {title_label}",
-                color="Direction",
-                color_continuous_scale=["green", "white", "red"],
-                text_auto=".2f",
-                hover_data={
-                    "Readable": True,
-                    "Impact": ":.2f",
-                    "Explanation": True
-                },
-            )
-            fig.update_layout(
-                height=340, margin=dict(l=20, r=20, t=40, b=20),
-                hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial"),
-                xaxis_title="Influence Strength",
-                yaxis_title=None,
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.warning(f"Could not display importance: {e}")
+        top5 = df.sort_values("Impact", ascending=False).head(5)
 
-    with tab_fd:
-        show_feature_importance_signed(best_dep['model_name'], "Depression")
-    with tab_fa:
-        show_feature_importance_signed(best_anx['model_name'], "Anxiety")
+        fig = px.bar(
+            top5, x="Impact", y="Readable", orientation="h",
+            title=f"Top 5 Influential Factors — {title_label}",
+            color="Direction",
+            color_continuous_scale=["green", "white", "red"],
+            hover_data={"Readable": True, "Impact": ":.2f", "Explanation": True},
+            text_auto=".2f"
+        )
+
+        fig.update_layout(
+            height=340, margin=dict(l=20, r=20, t=40, b=20),
+            hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial"),
+            xaxis_title="Influence Strength", yaxis_title=None
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        st.warning(f"Could not display importance: {e}")
+
+with tab_fd:
+    show_feature_importance_signed(best_dep['model_name'], "Depression")
+
+with tab_fa:
+    show_feature_importance_signed(best_anx['model_name'], "Anxiety")
+
 
     # --------------------------------------------------------------------
     # ALERT LOGIC (Combined Scores)
