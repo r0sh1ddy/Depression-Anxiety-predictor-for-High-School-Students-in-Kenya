@@ -33,12 +33,6 @@ Below are key visuals that summarize model performance, feature importance, and 
 | ![LightGBM Is Depressed SHAP](Image/LightGBM_Is_Depressed_SHAP.png) | SHAP interpretation for LightGBM depression model |
 | ![Logistic Has Anxiety SHAP](Image/Logistic_Has_anxiety_SHAP.png) | Logistic Regression SHAP analysis (Anxiety) |
 | ![Logistic Is Depressed SHAP](Image/Logistic_Is_Depressed_SHAP.png) | Logistic Regression SHAP analysis (Depression) |
-| ![Mental Health Scores by Gender](Image/Mental_Health_Scores_by_Gender.png) | Distribution of PHQ-9 and GAD-7 scores by gender |
-| ![Overlap of High Depression and Anxiety](Image/Overlap_of_High_Depression_and_Anxiety.png) | Co-occurrence of depression and anxiety |
-| ![PHQ Items](Image/PHQ_Items.png) | Distribution of PHQ-9 questionnaire responses |
-| ![Preliminary Feature Importance 1](Image/Preliminary_Feature_Importance_1.png) | Initial model feature ranking (part 1) |
-| ![Preliminary Feature Importance 2](Image/.png) | Initial model feature ranking (part 2) |
-| ![Prevalence of Depression and Anxiety](Image/Prevalence_of_Depression_and_Anxiety.png) | Overall prevalence of both disorders |
 | ![RandomForest Has Anxiety SHAP](Image/RandomForest_Has_anxiety_SHAP.png) | Random Forest SHAP values (Anxiety model) |
 | ![RandomForest Is Depressed SHAP](Image/RandomForest_Is_Depressed_SHAP.png) | Random Forest SHAP values (Depression model) |
 | ![XGBoost Has Anxiety SHAP](Image/XGBoost_Has_anxiety_SHAP.png) | XGBoost SHAP summary for anxiety |
@@ -57,4 +51,4 @@ jupyter notebook index.ipynb
 - bash
 streamlit run app.py
 - The link to our Tableau Dashboard is attached below https://public.tableau.com/views/Book1_17622355863080/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link
-
+- The link to our model is https://depression-anxiety-predictor-for-high-school-students-in-kenya.streamlit.app/
