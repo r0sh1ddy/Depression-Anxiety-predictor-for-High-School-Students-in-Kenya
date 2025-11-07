@@ -1,4 +1,4 @@
-Mental Health Screening App - Kenya
+AdolescentMind
 
 # Mental Health Screening Tool - Kenya
 
@@ -25,23 +25,8 @@ This is an **Interactive ensemble tool** for assessing depression (PHQ-8) and an
 ### **Step 1: Choose Your Model Selection Mode (Sidebar)**
 
 The tool offers three modes:
-
-1. **Auto-Select Best (Recommended)** 
-   - The system automatically selects the model with the highest recall for each target
-   - Best for accurate, data-driven predictions
-   - **Default option for most users**
-
-2. **Manual Selection** 
-   - You choose which models to use for Depression and Anxiety
-   - Good for comparing specific models
-   - Useful for understanding how different models perform
-
-3. **View All Models** 
-   - See predictions from ALL available models
-   - Compare how different models assess your responses
-   - Best for educational purposes or research
-
-### **Step 2: View Model Performance (Sidebar)**
+### Change background as desired (Sidebar)
+###  View Model Performance (Sidebar)**
 
 - Check the **interactive performance charts** to see how models compare
 - Toggle between **Recall** and **Accuracy** metrics
@@ -51,7 +36,7 @@ The tool offers three modes:
 
 ## Completing the Assessment
 
-### **Tab 1: Demographics (👤)**
+### **Tab 1: Demographics **
 
 Fill in your basic information:
 - **School Information:** Type (Boarding/Day), Gender composition, Location, County
@@ -114,7 +99,7 @@ Use the same frequency scale as PHQ-8.
 
 ### **Analysis Summary**
 
-After clicking "**🔍 Analyze Mental Health Status**", you'll see:
+After clicking "** Analyze Mental Health Status**", you'll see:
 
 1. **Model Information Badges**
    - Which AI model was used for Depression
@@ -346,7 +331,7 @@ A: Each model learns patterns differently. The tool uses the most reliable model
 **Q: Is my data secure?**  
 A: Yes. All processing happens in your browser. Nothing is stored or transmitted to external servers.
 
-## 📞 Contact & Support
+## Contact & Support
 
 For technical issues or questions about the tool:
 - Check the repository's GitHub Issues page
